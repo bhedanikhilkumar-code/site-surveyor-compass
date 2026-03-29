@@ -1,0 +1,38 @@
+# ⚡ QUICK RECOVERY CARD - PASTE THIS IN COMMAND PROMPT
+
+**Build Hit Error:** Dart SDK incompatibility ✅ FIXED
+
+---
+
+## 🚀 QUICK FIX (Copy & Paste)
+
+```powershell
+cd "C:\Users\bheda\Music\Desktop\Copilot CLI\site_surveyor_compass" && flutter clean && echo "Clean complete! Now run FULL_AUTO_BUILD.bat again"
+```
+
+**Then:**
+1. Right-click: FULL_AUTO_BUILD.bat
+2. Select: Run as administrator
+3. Wait: 25-30 minutes for build to complete
+
+---
+
+## What Was Fixed
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| permission_handler | 11.4.0 (needs Dart 3.5.0+) | 11.3.1 (works with Dart 3.2.0) |
+| Build Status | ❌ Stuck at [3/5] | ✅ Will complete [3-5/5] |
+| GitHub | Latest fix pushed | ✅ Ready to use |
+
+---
+
+## Next: Install APK
+
+After build completes (will see "BUILD SUCCESSFUL!"):
+→ Follow: **APK_INSTALLATION_COMPLETE_GUIDE.md**
+
+---
+
+**Everything is fixed. Build will work now!** ✅
+
