@@ -70,76 +70,143 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _buildCoordinateColumn(
-                                'Lat',
+                                'NL',
                                 gpsService.latitude != null
-                                    ? _formatCoordinate(gpsService.latitude!, isLatitude: true)
+                                    ? _formatCoordinate(gpsService.latitude!.abs(), isLatitude: true) +
+                                      (gpsService.latitude! >= 0 ? ' N' : ' S')
                                     : '--',
                               ),
                               _buildCoordinateColumn(
-                                'Lng',
+                                'EL',
                                 gpsService.longitude != null
-                                    ? _formatCoordinate(gpsService.longitude!, isLatitude: false)
+                                    ? _formatCoordinate(gpsService.longitude!.abs(), isLatitude: false) +
+                                      (gpsService.longitude! >= 0 ? ' E' : ' W')
                                     : '--',
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          // Address
-                          if (gpsService.address != null)
-                            Text(
-                              gpsService.address!,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          // Speed and Accuracy
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          // Address and GPS Info
+                          Column(
                             children: [
-                              Icon(
-                                Icons.speed,
-                                size: 16,
-                                color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${compassProvider.speed.toStringAsFixed(1)} km/h',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
+                              if (gpsService.address != null)
+                                Text(
+                                  gpsService.address!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              const SizedBox(height: 4),
+                              // GPS Accuracy
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.gps_fixed,
+                                    size: 14,
+                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    gpsService.accuracy != null
+                                        ? '${gpsService.accuracy!.toStringAsFixed(0)}m accuracy'
+                                        : 'No GPS lock',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              Icon(
-                                Icons.gps_fixed,
-                                size: 16,
-                                color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                            ],
+                          ),
+                          // Speed, Accuracy, and Declination
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Speed
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.speed,
+                                    size: 18,
+                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${compassProvider.speed.toStringAsFixed(1)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'km/h',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${compassProvider.accuracy.toStringAsFixed(0)}m',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
+                              // Accuracy
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.gps_fixed,
+                                    size: 18,
+                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    compassProvider.accuracy > 0
+                                        ? '${compassProvider.accuracy.toStringAsFixed(0)}'
+                                        : '--',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'meters',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 16),
-                              Icon(
-                                Icons.compass_calibration,
-                                size: 16,
-                                color: Colors.cyan,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.cyan,
-                                ),
+                              // Declination
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.compass_calibration,
+                                    size: 18,
+                                    color: Colors.cyan,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.cyan,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const Text(
+                                    'decl.',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.cyan,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
