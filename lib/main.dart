@@ -21,8 +21,14 @@ void main() async {
   // Initialize waypoint service
   final waypointService = WaypointService();
   await waypointService.initialize();
-  
-  runApp(SiteSurveyorCompassApp(waypointService: waypointService));
+
+  // Initialize compass provider
+  final compassProvider = CompassProvider();
+
+  runApp(SiteSurveyorCompassApp(
+    waypointService: waypointService,
+    compassProvider: compassProvider,
+  ));
 }
 
 Future<void> _requestPermissions() async {
@@ -41,18 +47,26 @@ Future<void> _requestPermissions() async {
 
 class SiteSurveyorCompassApp extends StatelessWidget {
   final WaypointService waypointService;
+  final CompassProvider compassProvider;
 
   const SiteSurveyorCompassApp({
     Key? key,
     required this.waypointService,
+    required this.compassProvider,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => CompassProvider()),
-        ChangeNotifierProvider(create: (_) => GpsService()),
+        ChangeNotifierProvider.value(value: compassProvider),
+        ChangeNotifierProvider(
+          create: (context) {
+            final gpsService = GpsService();
+            gpsService.setCompassProvider(compassProvider);
+            return gpsService;
+          },
+        ),
         Provider<WaypointService>(create: (_) => waypointService),
       ],
       child: MaterialApp(
