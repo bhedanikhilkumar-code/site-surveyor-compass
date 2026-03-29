@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/waypoint_model.dart';
 import '../services/waypoint_service.dart';
 import 'package:intl/intl.dart';
 
 class WaypointManagerScreen extends StatefulWidget {
-  final WaypointService waypointService;
-
   const WaypointManagerScreen({
     Key? key,
-    required this.waypointService,
   }) : super(key: key);
 
   @override
@@ -23,7 +21,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   @override
   void initState() {
     super.initState();
-    _waypoints = widget.waypointService.getWaypointsSortedByDate();
+    final waypointService = context.read<WaypointService>();
+    _waypoints = waypointService.getWaypointsSortedByDate();
   }
 
   @override
@@ -34,16 +33,18 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
 
   void _refreshWaypoints() {
     setState(() {
+      final waypointService = context.read<WaypointService>();
       if (_isSearching && searchController.text.isNotEmpty) {
-        _waypoints = widget.waypointService.searchWaypoints(searchController.text);
+        _waypoints = waypointService.searchWaypoints(searchController.text);
       } else {
-        _waypoints = widget.waypointService.getWaypointsSortedByDate();
+        _waypoints = waypointService.getWaypointsSortedByDate();
       }
     });
   }
 
   void _deleteWaypoint(String id) async {
-    await widget.waypointService.deleteWaypoint(id);
+    final waypointService = context.read<WaypointService>();
+    await waypointService.deleteWaypoint(id);
     _refreshWaypoints();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -364,7 +365,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                 final lng = double.tryParse(lngController.text) ?? 0;
                 final alt = double.tryParse(altController.text) ?? 0;
 
-                await widget.waypointService.createWaypoint(
+                final waypointService = context.read<WaypointService>();
+                await waypointService.createWaypoint(
                   name: name,
                   bearing: bearing,
                   latitude: lat,
@@ -428,7 +430,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           FilledButton(
             onPressed: () async {
               try {
-                await widget.waypointService.updateWaypoint(
+                final waypointService = context.read<WaypointService>();
+                await waypointService.updateWaypoint(
                   waypoint.id,
                   waypoint.copyWith(
                     name: nameController.text,
