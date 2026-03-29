@@ -47,7 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Direction Text
+                    // COMPASS DIAL - Rotating dial with tick marks, numbers, cardinal directions
+                    Center(
+                      child: CompassDial(
+                        bearing: compassProvider.bearing,
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Direction Text (e.g., 'South', 'North', etc.)
                     Text(
                       compassProvider.getCardinalDirection(compassProvider.bearing),
                       style: const TextStyle(
