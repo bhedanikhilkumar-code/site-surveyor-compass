@@ -161,68 +161,100 @@ class CompassPainter extends CustomPainter {
   void _drawCardinalDirections(Canvas canvas, Offset center, double radius, bool isDark) {
     const directions = ['N', 'E', 'S', 'W'];
     const angles = [0, 90, 180, 270];
-    const colors = [Colors.red, Colors.white, Colors.white, Colors.white]; // North in red
+    const colors = [Colors.red, Colors.cyan, Colors.cyan, Colors.cyan]; // North in red, others cyan
+    const scientificNames = ['Magnetic North', 'East', 'South', 'West'];
 
     for (int i = 0; i < directions.length; i++) {
       final angle = angles[i] * pi / 180;
-      final textRadius = radius * 0.65;
+      final textRadius = radius * 0.7;
       final x = center.dx + textRadius * sin(angle);
       final y = center.dy - textRadius * cos(angle);
 
-      // Draw directional arrow line
-      final arrowStartRadius = radius * 0.55;
-      final arrowEndRadius = radius * 0.75;
-      final startX = center.dx + arrowStartRadius * sin(angle);
-      final startY = center.dy - arrowStartRadius * cos(angle);
-      final endX = center.dx + arrowEndRadius * sin(angle);
-      final endY = center.dy - arrowEndRadius * cos(angle);
+      // Draw directional indicator lines (4D effect)
+      final indicatorLength = radius * 0.15;
+      for (int j = 0; j < 3; j++) {
+        final lineRadius = radius * (0.8 + j * 0.05);
+        final startX = center.dx + (lineRadius - indicatorLength) * sin(angle);
+        final startY = center.dy - (lineRadius - indicatorLength) * cos(angle);
+        final endX = center.dx + lineRadius * sin(angle);
+        final endY = center.dy - lineRadius * cos(angle);
 
-      canvas.drawLine(
-        Offset(startX, startY),
-        Offset(endX, endY),
-        Paint()
-          ..color = colors[i].withOpacity(0.8)
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round,
-      );
+        canvas.drawLine(
+          Offset(startX, startY),
+          Offset(endX, endY),
+          Paint()
+            ..color = colors[i].withOpacity(0.8 - j * 0.2)
+            ..strokeWidth = (3 - j).toDouble()
+            ..strokeCap = StrokeCap.round,
+        );
+      }
 
-      // Draw arrowhead
-      final arrowSize = 8;
-      final angle1 = angle + (160 * pi / 180);
-      final angle2 = angle - (160 * pi / 180);
+      // Enhanced arrowhead for North (scientific magnetic pole indicator)
+      if (i == 0) { // North
+        final arrowSize = 12;
+        final arrowStartRadius = radius * 0.75;
+        final arrowEndRadius = radius * 0.82;
 
-      final arrow1X = endX + arrowSize * cos(angle1);
-      final arrow1Y = endY + arrowSize * sin(angle1);
-      final arrow2X = endX + arrowSize * cos(angle2);
-      final arrow2Y = endY + arrowSize * sin(angle2);
+        final startX = center.dx + arrowStartRadius * sin(angle);
+        final startY = center.dy - arrowStartRadius * cos(angle);
+        final endX = center.dx + arrowEndRadius * sin(angle);
+        final endY = center.dy - arrowEndRadius * cos(angle);
 
-      final path = Path();
-      path.moveTo(endX, endY);
-      path.lineTo(arrow1X, arrow1Y);
-      path.lineTo(arrow2X, arrow2Y);
-      path.close();
+        // Arrow shaft
+        canvas.drawLine(
+          Offset(startX, startY),
+          Offset(endX, endY),
+          Paint()
+            ..color = Colors.red
+            ..strokeWidth = 4
+            ..strokeCap = StrokeCap.round,
+        );
 
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = colors[i]
-          ..style = PaintingStyle.fill,
-      );
+        // Arrowhead
+        final angle1 = angle + (150 * pi / 180);
+        final angle2 = angle - (150 * pi / 180);
 
-      // Draw direction text
+        final arrow1X = endX + arrowSize * cos(angle1);
+        final arrow1Y = endY + arrowSize * sin(angle1);
+        final arrow2X = endX + arrowSize * cos(angle2);
+        final arrow2Y = endY + arrowSize * sin(angle2);
+
+        final path = Path();
+        path.moveTo(endX, endY);
+        path.lineTo(arrow1X, arrow1Y);
+        path.lineTo(arrow2X, arrow2Y);
+        path.close();
+
+        // Glow effect
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = Colors.red.withOpacity(0.5)
+            ..style = PaintingStyle.fill,
+        );
+
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = Colors.red
+            ..style = PaintingStyle.fill,
+        );
+      }
+
+      // Scientific direction labels
       final textPainter = TextPainter(
         text: TextSpan(
           text: directions[i],
           style: TextStyle(
             color: colors[i],
-            fontSize: 28,
+            fontSize: i == 0 ? 32 : 24, // North larger
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.0,
+            letterSpacing: 1.5,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.5),
-                offset: const Offset(1, 1),
-                blurRadius: 2,
+                color: Colors.black.withOpacity(0.7),
+                offset: const Offset(2, 2),
+                blurRadius: 4,
               ),
             ],
           ),
@@ -234,6 +266,26 @@ class CompassPainter extends CustomPainter {
         canvas,
         Offset(x - textPainter.width / 2, y - textPainter.height / 2),
       );
+
+      // Add scientific subtitle for North
+      if (i == 0) {
+        final subtitlePainter = TextPainter(
+          text: TextSpan(
+            text: 'Magnetic',
+            style: TextStyle(
+              color: Colors.red.withOpacity(0.7),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        subtitlePainter.layout();
+        subtitlePainter.paint(
+          canvas,
+          Offset(x - subtitlePainter.width / 2, y + 18),
+        );
+      }
     }
   }
 
@@ -494,63 +546,136 @@ class CompassPainter extends CustomPainter {
   }
 
   void _drawGeomagneticAxis(Canvas canvas, Offset center, double radius, double magneticBearing, double trueBearing) {
-    // Scientific 4D visualization of geomagnetic field
-    final axisLength = radius * 0.85;
+    // Scientific 4D geomagnetic field visualization
+    final axisLength = radius * 0.9;
 
-    // Magnetic north-south axis (red - current field direction)
+    // Always show geomagnetic field representation
+    // Magnetic north-south meridian (red - Earth's magnetic field)
     final magAngle = magneticBearing * pi / 180;
-    final magNorthX = center.dx + axisLength * sin(magAngle);
-    final magNorthY = center.dy - axisLength * cos(magAngle);
-    final magSouthX = center.dx - axisLength * sin(magAngle);
-    final magSouthY = center.dy + axisLength * cos(magAngle);
 
-    // Draw magnetic field lines
-    canvas.drawLine(
-      Offset(magSouthX, magSouthY),
-      Offset(magNorthX, magNorthY),
-      Paint()
-        ..color = Colors.red.withOpacity(0.4)
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round,
-    );
+    // Draw magnetic field meridian lines with higher opacity
+    for (int i = 0; i < 4; i++) {
+      final distance = axisLength * (0.3 + i * 0.2);
+      final northX = center.dx + distance * sin(magAngle);
+      final northY = center.dy - distance * cos(magAngle);
+      final southX = center.dx - distance * sin(magAngle);
+      final southY = center.dy + distance * cos(magAngle);
 
-    // True north-south axis (blue - geographic pole)
+      canvas.drawLine(
+        Offset(southX, southY),
+        Offset(northX, northY),
+        Paint()
+          ..color = Colors.red.withOpacity(0.6 - i * 0.1)
+          ..strokeWidth = 2 - i * 0.3
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+
+    // True north-south geographic meridian (blue - Earth's rotational axis)
     final trueAngle = trueBearing * pi / 180;
+
+    // Draw geographic meridian with different style
     final trueNorthX = center.dx + axisLength * sin(trueAngle);
     final trueNorthY = center.dy - axisLength * cos(trueAngle);
     final trueSouthX = center.dx - axisLength * sin(trueAngle);
     final trueSouthY = center.dy + axisLength * cos(trueAngle);
 
-    // Draw geographic field lines
-    canvas.drawLine(
-      Offset(trueSouthX, trueSouthY),
+    // Dashed line for geographic north
+    _drawDashedLine(
+      canvas,
+      Offset(center.dx, center.dy),
       Offset(trueNorthX, trueNorthY),
       Paint()
-        ..color = Colors.blue.withOpacity(0.4)
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke,
+        ..color = Colors.blue.withOpacity(0.7)
+        ..strokeWidth = 2,
     );
 
-    // Add declination angle visualization if different
-    if ((trueBearing - magneticBearing).abs() > 1) {
-      final declinationAngle = ((trueBearing - magneticBearing + 180) % 360 - 180);
-      final declinationRadius = radius * 0.75;
+    // Solid line for geographic south
+    canvas.drawLine(
+      Offset(center.dx, center.dy),
+      Offset(trueSouthX, trueSouthY),
+      Paint()
+        ..color = Colors.blue.withOpacity(0.7)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
 
-      // Draw declination arc
+    // 4D Declination visualization - show magnetic variation
+    final declinationAngle = ((trueBearing - magneticBearing + 180) % 360 - 180);
+    if (declinationAngle.abs() > 0.5) {
+      final declinationRadius = radius * 0.7;
+
+      // Draw declination angle indicator
       final rect = Rect.fromCircle(center: center, radius: declinationRadius);
       final startAngle = magneticBearing * pi / 180;
       final sweepAngle = declinationAngle * pi / 180;
 
+      // Background arc
+      canvas.drawArc(
+        rect,
+        0,
+        2 * pi,
+        false,
+        Paint()
+          ..color = Colors.white.withOpacity(0.1)
+          ..strokeWidth = 3
+          ..style = PaintingStyle.stroke,
+      );
+
+      // Declination arc
       canvas.drawArc(
         rect,
         startAngle,
         sweepAngle,
         false,
         Paint()
-          ..color = Colors.yellow.withOpacity(0.3)
-          ..strokeWidth = 2
+          ..color = Colors.yellow.withOpacity(0.8)
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
+      );
+
+      // Declination angle text
+      final declinationText = '${declinationAngle.abs().toStringAsFixed(1)}°';
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: declinationText,
+          style: TextStyle(
+            color: Colors.yellow,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+
+      final textAngle = (startAngle + sweepAngle / 2) % (2 * pi);
+      final textRadius = radius * 0.8;
+      final textX = center.dx + textRadius * sin(textAngle);
+      final textY = center.dy - textRadius * cos(textAngle);
+
+      textPainter.paint(
+        canvas,
+        Offset(textX - textPainter.width / 2, textY - textPainter.height / 2),
+      );
+    }
+
+    // Scientific field lines emanating from center (4D effect)
+    for (int i = 0; i < 8; i++) {
+      final angle = (i * 45) * pi / 180;
+      final fieldLength = radius * (0.4 + (i % 2) * 0.2);
+
+      final endX = center.dx + fieldLength * sin(angle);
+      final endY = center.dy - fieldLength * cos(angle);
+
+      canvas.drawLine(
+        Offset(center.dx, center.dy),
+        Offset(endX, endY),
+        Paint()
+          ..color = Colors.cyan.withOpacity(0.3)
+          ..strokeWidth = 1
+          ..strokeCap = StrokeCap.round,
       );
     }
   }
