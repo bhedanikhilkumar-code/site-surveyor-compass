@@ -47,30 +47,57 @@ class CompassPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Draw gradient background like iCompass
+    // Draw premium gradient background with multiple layers
+    // Outer glow ring
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.cyan.withOpacity(0.1),
+            Colors.transparent,
+          ],
+          stops: const [0.8, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
+    );
+
+    // Main dial gradient
     final gradientPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          const Color(0xFF2C2C2C),
-          const Color(0xFF1A1A1A),
-          Colors.black,
+          const Color(0xFF3A3A3A), // Light gray center
+          const Color(0xFF2A2A2A), // Medium gray
+          const Color(0xFF1A1A1A), // Dark gray
+          Colors.black, // Black edge
         ],
-        stops: const [0.0, 0.7, 1.0],
+        stops: const [0.0, 0.4, 0.8, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
 
     canvas.drawCircle(center, radius, gradientPaint);
 
-    // Draw multiple rings for depth
-    for (int i = 3; i >= 1; i--) {
+    // Draw concentric rings for depth
+    for (int i = 1; i <= 3; i++) {
+      final ringRadius = radius * (i / 4);
       canvas.drawCircle(
         center,
-        radius * (i / 3),
+        ringRadius,
         Paint()
-          ..color = Colors.cyan.withOpacity(0.1)
+          ..color = Colors.white.withOpacity(0.1)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 0.5,
+          ..strokeWidth = 1,
       );
     }
+
+    // Inner highlight ring
+    canvas.drawCircle(
+      center,
+      radius * 0.6,
+      Paint()
+        ..color = Colors.white.withOpacity(0.05)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
 
     // Draw outer glowing border
     canvas.drawCircle(
@@ -189,9 +216,56 @@ class CompassPainter extends CustomPainter {
       );
     }
 
+    // Draw degree markers every 30 degrees with numbers
+    for (int i = 0; i < 360; i += 30) {
+      if (cardinalAngles.contains(i)) continue; // Skip cardinal points
+      final angle = i * pi / 180;
+      final startRadius = radius - 15;
+      final endRadius = radius - 5;
+
+      final startX = center.dx + startRadius * sin(angle);
+      final startY = center.dy - startRadius * cos(angle);
+      final endX = center.dx + endRadius * sin(angle);
+      final endY = center.dy - endRadius * cos(angle);
+
+      // Longer tick
+      final paint = Paint()
+        ..color = Colors.white.withOpacity(0.6)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(
+        Offset(startX, startY),
+        Offset(endX, endY),
+        paint,
+      );
+
+      // Add degree numbers
+      final textRadius = radius - 30;
+      final textX = center.dx + textRadius * sin(angle);
+      final textY = center.dy - textRadius * cos(angle);
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: i.toString(),
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(textX - textPainter.width / 2, textY - textPainter.height / 2),
+      );
+    }
+
     // Draw smaller tick marks every 10 degrees
     for (int i = 0; i < 360; i += 10) {
-      if (cardinalAngles.contains(i)) continue; // Skip cardinal points
+      if (cardinalAngles.contains(i) || i % 30 == 0) continue; // Skip major marks
       final angle = i * pi / 180;
       final startRadius = radius - 10;
       final endRadius = radius - 5;
@@ -202,8 +276,8 @@ class CompassPainter extends CustomPainter {
       final endY = center.dy - endRadius * cos(angle);
 
       final paint = Paint()
-        ..color = Colors.white.withOpacity(0.4)
-        ..strokeWidth = 1.5
+        ..color = Colors.white.withOpacity(0.3)
+        ..strokeWidth = 1
         ..strokeCap = StrokeCap.round;
 
       canvas.drawLine(
@@ -249,34 +323,44 @@ class CompassPainter extends CustomPainter {
     final angle = bearing * pi / 180;
 
     // Main needle
-    final needleLength = radius - 40;
+    final needleLength = radius - 45;
     final endX = center.dx + needleLength * sin(angle);
     final endY = center.dy - needleLength * cos(angle);
 
-    // Shadow/glow effect
+    // Outer glow ring for needle
     canvas.drawLine(
-      Offset(center.dx + 2, center.dy + 2),
-      Offset(endX + 2, endY + 2),
+      center,
+      Offset(endX, endY),
       Paint()
-        ..color = Colors.black.withOpacity(0.3)
-        ..strokeWidth = 6
+        ..color = Colors.red.withOpacity(0.3)
+        ..strokeWidth = 8
         ..strokeCap = StrokeCap.round,
     );
 
-    // Red needle
+    // Main red needle
     canvas.drawLine(
       center,
       Offset(endX, endY),
       Paint()
         ..color = Colors.red
-        ..strokeWidth = 5
+        ..strokeWidth = 4
         ..strokeCap = StrokeCap.round,
     );
 
-    // Arrowhead with glow
-    final arrowSize = 18;
-    final angle1 = angle + (160 * pi / 180);
-    final angle2 = angle - (160 * pi / 180);
+    // Inner white line for contrast
+    canvas.drawLine(
+      center,
+      Offset(endX, endY),
+      Paint()
+        ..color = Colors.white.withOpacity(0.8)
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Enhanced arrowhead
+    final arrowSize = 20;
+    final angle1 = angle + (150 * pi / 180);
+    final angle2 = angle - (150 * pi / 180);
 
     final arrow1X = endX + arrowSize * cos(angle1);
     final arrow1Y = endY + arrowSize * sin(angle1);
@@ -289,19 +373,36 @@ class CompassPainter extends CustomPainter {
     path.lineTo(arrow2X, arrow2Y);
     path.close();
 
-    // Shadow
+    // Arrow glow
     canvas.drawPath(
-      path.shift(const Offset(2, 2)),
+      path,
       Paint()
-        ..color = Colors.black.withOpacity(0.3)
+        ..color = Colors.red.withOpacity(0.5)
         ..style = PaintingStyle.fill,
     );
 
-    // Arrow
+    // Arrow fill
     canvas.drawPath(
       path,
       Paint()
         ..color = Colors.red
+        ..style = PaintingStyle.fill,
+    );
+
+    // Center dot
+    canvas.drawCircle(
+      center,
+      6,
+      Paint()
+        ..color = Colors.red
+        ..style = PaintingStyle.fill,
+    );
+
+    canvas.drawCircle(
+      center,
+      4,
+      Paint()
+        ..color = Colors.white
         ..style = PaintingStyle.fill,
     );
   }
@@ -352,9 +453,16 @@ class CompassPainter extends CustomPainter {
         text: '${bearing.toStringAsFixed(0)}°',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 48,
+          fontSize: 50,
           fontWeight: FontWeight.w900,
           fontFamily: 'monospace',
+          shadows: [
+            Shadow(
+              color: Colors.black.withOpacity(0.5),
+              offset: const Offset(2, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
       ),
       textDirection: TextDirection.ltr,
