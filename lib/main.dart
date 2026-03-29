@@ -72,7 +72,7 @@ class SiteSurveyorCompassApp extends StatelessWidget {
             brightness: Brightness.dark,
           ),
         ),
-        themeMode: ThemeMode.system,
+        themeMode: ThemeMode.dark,
         home: const HomeScreen(),
       ),
     );

@@ -13,19 +13,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   bool _showTrueBearing = true;
-  bool _levelCalibrationMode = false;
-  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final gpsService = context.read<GpsService>();
       gpsService.getInitialPosition();
@@ -34,7 +28,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    _animationController.dispose();
     super.dispose();
   }
 
@@ -324,52 +317,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildLocationInfo(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.white54,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.cyan,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildElevationInfo(String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.height, size: 16, color: Colors.white54),
-        const SizedBox(width: 6),
-        Text(
-          'Elevation: ',
-          style: TextStyle(fontSize: 12, color: Colors.white54),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.cyan,
-            fontFamily: 'monospace',
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildToggleButton(
     String label,
@@ -475,14 +423,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.compass_calibration),
-              title: const Text('Calibrate Compass'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => _levelCalibrationMode = true);
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.edit_location),
               title: const Text('Manage Waypoints'),
               onTap: () {
@@ -501,27 +441,5 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Site Surveyor Compass'),
-        content: const Text(
-          'Professional Compass & GPS Navigation\n\n'
-          '• Accurate magnetic and true bearing\n'
-          '• Real-time GPS coordinates\n'
-          '• Elevation tracking\n'
-          '• Waypoint management\n'
-          '• Data export',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

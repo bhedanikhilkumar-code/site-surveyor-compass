@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-class CompassDial extends StatefulWidget {
+class CompassDial extends StatelessWidget {
   final double bearing;
   final double trueBearing;
   final bool showTrueBearing;
@@ -14,71 +14,17 @@ class CompassDial extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<CompassDial> createState() => _CompassDialState();
-}
-
-class _CompassDialState extends State<CompassDial>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-  double _previousBearing = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousBearing = widget.bearing;
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _animation = Tween<double>(
-      begin: _previousBearing,
-      end: widget.bearing,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
-  }
-
-  @override
-  void didUpdateWidget(CompassDial oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.bearing != widget.bearing) {
-      _previousBearing = _animation.value;
-      _animation = Tween<double>(
-        begin: _previousBearing,
-        end: widget.bearing,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ));
-      _animationController.forward(from: 0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: CompassPainter(
-            bearing: _animation.value,
-            trueBearing: widget.trueBearing,
-            showTrueBearing: widget.showTrueBearing,
-            isDark: isDark,
-          ),
-          size: const Size(300, 300),
-        );
-      },
+    return CustomPaint(
+      painter: CompassPainter(
+        bearing: bearing,
+        trueBearing: trueBearing,
+        showTrueBearing: showTrueBearing,
+        isDark: isDark,
+      ),
+      size: const Size(300, 300),
     );
   }
 }
