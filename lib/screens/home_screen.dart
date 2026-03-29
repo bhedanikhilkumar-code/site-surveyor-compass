@@ -5,6 +5,7 @@ import '../services/gps_service.dart';
 import '../services/waypoint_service.dart';
 import '../widgets/compass_dial.dart';
 import 'waypoint_manager_screen.dart';
+import 'level_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -279,7 +280,12 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Level',
             isActive: false,
             onPressed: () {
-              // Navigate to level screen, but for now do nothing
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LevelScreen(),
+                ),
+              );
             },
           ),
         ],
