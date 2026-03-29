@@ -157,41 +157,31 @@ class LevelGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withOpacity(0.15)
       ..strokeWidth = 1;
 
     final center = Offset(size.width / 2, size.height / 2);
 
-    // Horizontal lines
-    for (int i = -4; i <= 4; i++) {
-      final y = center.dy + i * 20;
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        paint,
-      );
-    }
-
-    // Vertical lines
-    for (int i = -4; i <= 4; i++) {
-      final x = center.dx + i * 20;
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, size.height),
-        paint,
-      );
+    // Simplified grid - major lines only
+    for (int i = -2; i <= 2; i++) {
+      if (i == 0) continue; // Skip center lines, drawn separately
+      final y = center.dy + i * 30;
+      final x = center.dx + i * 30;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
 
     // Center cross
     paint.strokeWidth = 2;
+    paint.color = Colors.white.withOpacity(0.3);
     canvas.drawLine(
-      Offset(center.dx - 30, center.dy),
-      Offset(center.dx + 30, center.dy),
+      Offset(center.dx - 40, center.dy),
+      Offset(center.dx + 40, center.dy),
       paint,
     );
     canvas.drawLine(
-      Offset(center.dx, center.dy - 30),
-      Offset(center.dx, center.dy + 30),
+      Offset(center.dx, center.dy - 40),
+      Offset(center.dx, center.dy + 40),
       paint,
     );
   }

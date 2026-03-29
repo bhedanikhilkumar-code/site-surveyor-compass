@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:flutter/foundation.dart';
+import '../providers/compass_provider.dart';
 
 class GpsService extends ChangeNotifier {
   Position? _currentPosition;
   bool _isListening = false;
   String? _locationError;
+  String? _address;
   StreamSubscription<Position>? _positionStream;
+  CompassProvider? _compassProvider;
 
   // Small smoothing filter for displayed coordinates
   double? _smoothedLat;
@@ -20,6 +24,28 @@ class GpsService extends ChangeNotifier {
   double? get longitude => _smoothedLng ?? _currentPosition?.longitude;
   double? get altitude => _currentPosition?.altitude;
   double? get accuracy => _currentPosition?.accuracy;
+  String? get address => _address;
+  double? get speed => _currentPosition?.speed;
+
+  void setCompassProvider(CompassProvider provider) {
+    _compassProvider = provider;
+  }
+
+  Future<void> _resolveAddress(double lat, double lng) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        _address = [
+          if (place.locality != null) place.locality,
+          if (place.administrativeArea != null) place.administrativeArea,
+          if (place.country != null) place.country,
+        ].where((s) => s?.isNotEmpty ?? false).join(', ');
+      }
+    } catch (e) {
+      _address = null; // Failed to resolve address
+    }
+  }
 
   Future<bool> requestLocationPermissions() async {
     try {
@@ -131,6 +157,19 @@ class GpsService extends ChangeNotifier {
           }
 
           _locationError = null;
+
+          // Update compass provider with GPS data
+          if (_compassProvider != null) {
+            _compassProvider!.updateGpsData(
+              speed: position.speed,
+              accuracy: position.accuracy,
+              hasLock: position.accuracy < 50, // Consider locked if accuracy < 50m
+            );
+          }
+
+          // Resolve address (don't await to avoid blocking)
+          _resolveAddress(position.latitude, position.longitude);
+
           notifyListeners();
         },
         onError: (dynamic error) {

@@ -36,23 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
-      body: Stack(
-        children: [
-          Consumer3<CompassProvider, GpsService, WaypointService>(
-            builder: (context, compassProvider, gpsService, waypointService, _) {
-              return SingleChildScrollView(
+      body: Consumer3<CompassProvider, GpsService, WaypointService>(
+        builder: (context, compassProvider, gpsService, waypointService, _) {
+          return Stack(
+            children: [
+              SingleChildScrollView(
                 child: Column(
                   children: [
-                    const SizedBox(height: 60), // Space for settings icon
-
-                    // Main Compass Dial
-                    Center(
-                      child: CompassDial(
-                        bearing: compassProvider.bearing,
-                        trueBearing: compassProvider.trueBearing,
-                        showTrueBearing: _showTrueBearing,
-                      ),
-                    ),
+                    const SizedBox(height: 60), // Space for indicators
 
                     const SizedBox(height: 24),
 
@@ -69,23 +60,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Coordinates Section
+                    // GPS Info Section
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
                         children: [
-                          _buildCoordinateColumn(
-                            'NL',
-                            gpsService.currentPosition != null
-                                ? _formatCoordinate(gpsService.currentPosition!.latitude, isLatitude: true)
-                                : '--',
+                          // Coordinates
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildCoordinateColumn(
+                                'Lat',
+                                gpsService.latitude != null
+                                    ? _formatCoordinate(gpsService.latitude!, isLatitude: true)
+                                    : '--',
+                              ),
+                              _buildCoordinateColumn(
+                                'Lng',
+                                gpsService.longitude != null
+                                    ? _formatCoordinate(gpsService.longitude!, isLatitude: false)
+                                    : '--',
+                              ),
+                            ],
                           ),
-                          _buildCoordinateColumn(
-                            'EL',
-                            gpsService.currentPosition != null
-                                ? _formatCoordinate(gpsService.currentPosition!.longitude, isLatitude: false)
-                                : '--',
+                          const SizedBox(height: 8),
+                          // Address
+                          if (gpsService.address != null)
+                            Text(
+                              gpsService.address!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          // Speed and Accuracy
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.speed,
+                                size: 16,
+                                color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${compassProvider.speed.toStringAsFixed(1)} km/h',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.gps_fixed,
+                                size: 16,
+                                color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${compassProvider.accuracy.toStringAsFixed(0)}m',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -125,98 +167,146 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 48),
 
-                    // Bearing Type Toggle
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildToggleButton(
-                              'Magnetic',
-                              !_showTrueBearing,
-                              () {
-                                setState(() => _showTrueBearing = false);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildToggleButton(
-                              'True Bearing',
-                              _showTrueBearing,
-                              () {
-                                setState(() => _showTrueBearing = true);
-                              },
-                            ),
-                          ),
-                        ],
+                // Bearing Type Toggle
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildBearingToggle(
+                        icon: Icons.compass_calibration,
+                        label: 'Magnetic',
+                        isActive: !_showTrueBearing,
+                        onPressed: () {
+                          setState(() => _showTrueBearing = false);
+                        },
                       ),
-                    ),
+                      const SizedBox(width: 16),
+                      _buildBearingToggle(
+                        icon: Icons.explore,
+                        label: 'True North',
+                        isActive: _showTrueBearing,
+                        onPressed: () {
+                          setState(() => _showTrueBearing = true);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
 
                     const SizedBox(height: 24),
 
-                    // Quick Actions
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildActionButton(
-                              icon: Icons.navigation,
-                              label: 'Waypoints',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const WaypointManagerScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildActionButton(
-                              icon: Icons.settings,
-                              label: 'Settings',
-                              onPressed: () =>
-                                  _showSettingsBottomSheet(context),
-                            ),
-                          ),
-                        ],
+                // Quick Actions
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.navigation,
+                          label: 'Waypoints',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const WaypointManagerScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.speed,
+                          label: 'Speed: ${compassProvider.speed.toStringAsFixed(1)} km/h',
+                          onPressed: () {
+                            // Speed is already displayed, maybe show detailed speed info
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Current Speed: ${compassProvider.speed.toStringAsFixed(1)} m/s\n'
+                                  'GPS Accuracy: ${compassProvider.accuracy.toStringAsFixed(1)}m'
+                                ),
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                     const SizedBox(height: 100), // Space for bottom nav
                   ],
                 ),
-              );
-            },
-          ),
-
-          // Settings icon top right
-          Positioned(
-            top: 20,
-            right: 20,
-            child: IconButton(
-              icon: const Icon(
-                Icons.settings_outlined,
-                color: Colors.white,
-                size: 28,
               ),
-              onPressed: () => _showSettingsBottomSheet(context),
-            ),
-          ),
 
-          // Bottom Navigation
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomNavigation(),
-          ),
-        ],
+              // Top indicators
+              Positioned(
+                top: 20,
+                left: 20,
+                right: 60,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // GPS Status
+                    Row(
+                      children: [
+                        Icon(
+                          compassProvider.hasGpsLock ? Icons.gps_fixed : Icons.gps_off,
+                          color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          compassProvider.hasGpsLock ? 'GPS' : 'No GPS',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Accuracy
+                    if (compassProvider.accuracy > 0)
+                      Text(
+                        '${compassProvider.accuracy.toStringAsFixed(0)}m',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Settings icon top right
+              Positioned(
+                top: 20,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  onPressed: () => _showSettingsBottomSheet(context),
+                ),
+              ),
+
+              // Bottom Navigation
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: _buildBottomNavigation(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -325,55 +415,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
 
-  Widget _buildToggleButton(
-    String label,
-    bool isActive,
-    VoidCallback onPressed,
-  ) {
+  Widget _buildBearingToggle({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onPressed,
+  }) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: isActive
-              ? LinearGradient(
-                  colors: [
-                    Colors.cyan.withOpacity(0.8),
-                    Colors.blue.withOpacity(0.6),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : LinearGradient(
-                  colors: [
-                    Colors.grey[800]!,
-                    Colors.grey[850]!,
-                  ],
-                ),
+          borderRadius: BorderRadius.circular(8),
+          color: isActive ? Colors.cyan.withOpacity(0.2) : Colors.transparent,
           border: Border.all(
-            color: isActive ? Colors.cyan : Colors.grey[700]!,
-            width: 1.5,
+            color: isActive ? Colors.cyan : Colors.grey[600]!,
+            width: 1,
           ),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.cyan.withOpacity(0.3),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : [],
         ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isActive ? Colors.black87 : Colors.white70,
-            letterSpacing: 0.5,
-          ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isActive ? Colors.cyan : Colors.grey[400],
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isActive ? Colors.cyan : Colors.grey[400],
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );

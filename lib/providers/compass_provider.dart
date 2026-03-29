@@ -10,6 +10,9 @@ class CompassProvider extends ChangeNotifier {
   double _roll = 0.0;
   double _magneticDeclination = 0.0;
   bool _isCalibrating = false;
+  double _speed = 0.0; // GPS speed in m/s
+  double _accuracy = 0.0; // GPS accuracy in meters
+  bool _hasGpsLock = false;
 
   // Smoothing / stability parameters
   static const double _alphaFilter = 0.12; // low-pass smoothing
@@ -32,6 +35,9 @@ class CompassProvider extends ChangeNotifier {
   double get roll => _roll;
   double get magneticDeclination => _magneticDeclination;
   bool get isCalibrating => _isCalibrating;
+  double get speed => _speed;
+  double get accuracy => _accuracy;
+  bool get hasGpsLock => _hasGpsLock;
 
   CompassProvider() {
     _initializeSensors();
@@ -115,6 +121,13 @@ class CompassProvider extends ChangeNotifier {
     // Recompute true bearing immediately
     _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
     notifyListeners();
+  }
+
+  void updateGpsData({required double speed, required double accuracy, required bool hasLock}) {
+    _speed = speed;
+    _accuracy = accuracy;
+    _hasGpsLock = hasLock;
+    // No notifyListeners here as this is called frequently from GPS updates
   }
 
   void startCalibration() {
