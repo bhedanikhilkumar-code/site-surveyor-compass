@@ -124,89 +124,78 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          // Speed, Accuracy, and Declination
+                          // Navigation Data Grid (4 columns)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               // Speed
-                              Column(
-                                children: [
-                                  Icon(
-                                    Icons.speed,
-                                    size: 18,
-                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${compassProvider.speed.toStringAsFixed(1)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'km/h',
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.orange,
-                                    ),
-                                  ),
-                                ],
+                              _buildNavDataColumn(
+                                Icons.speed,
+                                '${compassProvider.speed.toStringAsFixed(1)}',
+                                'km/h',
+                                compassProvider.hasGpsLock ? Colors.green : Colors.orange,
                               ),
                               // Accuracy
-                              Column(
-                                children: [
-                                  Icon(
-                                    Icons.gps_fixed,
-                                    size: 18,
-                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    compassProvider.accuracy > 0
-                                        ? '${compassProvider.accuracy.toStringAsFixed(0)}'
-                                        : '--',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    'meters',
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                                    ),
-                                  ),
-                                ],
+                              _buildNavDataColumn(
+                                Icons.gps_fixed,
+                                compassProvider.accuracy > 0
+                                    ? '${compassProvider.accuracy.toStringAsFixed(0)}'
+                                    : '--',
+                                'meters',
+                                compassProvider.hasGpsLock ? Colors.green : Colors.red,
                               ),
                               // Declination
-                              Column(
-                                children: [
-                                  Icon(
-                                    Icons.compass_calibration,
-                                    size: 18,
-                                    color: Colors.cyan,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.cyan,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const Text(
-                                    'decl.',
-                                    style: TextStyle(
-                                      fontSize: 8,
-                                      color: Colors.cyan,
-                                    ),
-                                  ),
-                                ],
+                              _buildNavDataColumn(
+                                Icons.compass_calibration,
+                                '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
+                                'decl.',
+                                Colors.cyan,
+                              ),
+                              // Altitude
+                              _buildNavDataColumn(
+                                Icons.height,
+                                gpsService.altitude != null
+                                    ? '${gpsService.altitude!.toStringAsFixed(0)}'
+                                    : '--',
+                                'meters',
+                                gpsService.altitude != null ? Colors.blue : Colors.grey,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Additional Navigation Info (4 more items for comprehensive display)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              // Time
+                              _buildNavDataColumn(
+                                Icons.access_time,
+                                DateTime.now().toString().substring(11, 16), // HH:MM
+                                DateTime.now().toString().substring(8, 10), // Day
+                                Colors.amber,
+                              ),
+                              // Bearing Format
+                              _buildNavDataColumn(
+                                _showTrueBearing ? Icons.explore : Icons.compass_calibration,
+                                _showTrueBearing ? 'TRUE' : 'MAG',
+                                'north',
+                                _showTrueBearing ? Colors.blue : Colors.red,
+                              ),
+                              // Sunrise
+                              _buildNavDataColumn(
+                                Icons.wb_sunny,
+                                '06:30', // Placeholder - would need location-based calculation
+                                'sunrise',
+                                Colors.orange,
+                              ),
+                              // Sunset
+                              _buildNavDataColumn(
+                                Icons.brightness_2,
+                                '18:45', // Placeholder - would need location-based calculation
+                                'sunset',
+                                Colors.purple,
                               ),
                             ],
                           ),
@@ -378,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Bottom Navigation
+              // Bottom Navigation (4 tabs)
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -409,6 +398,34 @@ class _HomeScreenState extends State<HomeScreen> {
             fontSize: 16,
             color: Colors.white,
             fontFamily: 'monospace',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavDataColumn(IconData icon, String value, String unit, Color color) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: color,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          unit,
+          style: TextStyle(
+            fontSize: 9,
+            color: color.withOpacity(0.7),
           ),
         ),
       ],
@@ -457,6 +474,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (context) => const LevelScreen(),
                 ),
               );
+            },
+          ),
+          _buildBottomNavItem(
+            icon: Icons.map,
+            label: 'Map',
+            isActive: false,
+            onPressed: () {
+              // Placeholder for map screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Map feature coming soon!')),
+              );
+            },
+          ),
+          _buildBottomNavItem(
+            icon: Icons.settings,
+            label: 'Tools',
+            isActive: false,
+            onPressed: () {
+              _showSettingsBottomSheet(context);
             },
           ),
         ],
