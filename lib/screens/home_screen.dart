@@ -44,41 +44,45 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
-      body: Consumer3<CompassProvider, GpsService, WaypointService>(
-        builder: (context, compassProvider, gpsService, waypointService, _) {
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 60), // Space for indicators
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 60), // Space for indicators
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                    // COMPASS DIAL - Rotating dial with tick marks, numbers, cardinal directions
-                    Center(
-                      child: CompassDial(
-                        bearing: compassProvider.bearing,
-                      ),
-                    ),
+                // COMPASS SECTION - Only this part rebuilds on bearing change
+                Selector<CompassProvider, double>(
+                  selector: (_, provider) => provider.bearing,
+                  builder: (context, bearing, _) {
+                    return Column(
+                      children: [
+                        Center(
+                          child: CompassDial(bearing: bearing),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.read<CompassProvider>().getCardinalDirection(bearing),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white,
+                            fontFamily: 'sans-serif',
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
 
-                    const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                    // Direction Text (e.g., 'South', 'North', etc.)
-                    Text(
-                      compassProvider.getCardinalDirection(compassProvider.bearing),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        fontFamily: 'sans-serif',
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // GPS Info Section
-                    Padding(
+                // GPS & NAVIGATION INFO - Rebuilds on GPS or Provider status changes
+                Consumer2<CompassProvider, GpsService>(
+                  builder: (context, compassProvider, gpsService, _) {
+                    return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         children: [
@@ -118,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               const SizedBox(height: 4),
-                              // GPS Accuracy
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -141,18 +144,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          // Navigation Data Grid (4 columns)
+                          
+                          const SizedBox(height: 16),
+
+                          // Navigation Data Grid
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              // Speed
                               _buildNavDataColumn(
                                 Icons.speed,
                                 '${compassProvider.speed.toStringAsFixed(1)}',
                                 'km/h',
                                 compassProvider.hasGpsLock ? Colors.green : Colors.orange,
                               ),
-                              // Accuracy
                               _buildNavDataColumn(
                                 Icons.gps_fixed,
                                 compassProvider.accuracy > 0
@@ -161,14 +165,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 'meters',
                                 compassProvider.hasGpsLock ? Colors.green : Colors.red,
                               ),
-                              // Declination
                               _buildNavDataColumn(
                                 Icons.compass_calibration,
                                 '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
                                 'decl.',
                                 Colors.cyan,
                               ),
-                              // Altitude
                               _buildNavDataColumn(
                                 Icons.height,
                                 gpsService.altitude != null
@@ -180,79 +182,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
 
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
 
-                          // Additional Navigation Info (4 more items for comprehensive display)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              // Time
                               _buildNavDataColumn(
                                 Icons.access_time,
-                                DateTime.now().toString().substring(11, 16), // HH:MM
-                                DateTime.now().toString().substring(8, 10), // Day
+                                DateTime.now().toString().substring(11, 16),
+                                DateTime.now().toString().substring(8, 10),
                                 Colors.amber,
                               ),
-                              // Bearing Format
                               _buildNavDataColumn(
                                 _showTrueBearing ? Icons.explore : Icons.compass_calibration,
                                 _showTrueBearing ? 'TRUE' : 'MAG',
                                 'north',
                                 _showTrueBearing ? Colors.blue : Colors.red,
                               ),
-                              // Sunrise
-                              _buildNavDataColumn(
-                                Icons.wb_sunny,
-                                '06:30', // Placeholder - would need location-based calculation
-                                'sunrise',
-                                Colors.orange,
-                              ),
-                              // Sunset
-                              _buildNavDataColumn(
-                                Icons.brightness_2,
-                                '18:45', // Placeholder - would need location-based calculation
-                                'sunset',
-                                Colors.purple,
-                              ),
+                              _buildNavDataColumn(Icons.wb_sunny, '06:30', 'sunrise', Colors.orange),
+                              _buildNavDataColumn(Icons.brightness_2, '18:45', 'sunset', Colors.purple),
                             ],
                           ),
                         ],
                       ),
-                    ),
+                    );
+                  },
+                ),
 
-                    const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                    // Elevation
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Elevation',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          gpsService.currentPosition?.altitude != null
-                              ? '${gpsService.currentPosition!.altitude!.toStringAsFixed(1)} m'
-                              : '--',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.info_outline,
-                          size: 12,
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
+                // Elevation
+                Consumer<GpsService>(
+                  builder: (context, gpsService, _) => Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Elevation', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+                      const SizedBox(width: 8),
+                      Text(
+                        gpsService.currentPosition?.altitude != null
+                            ? '${gpsService.currentPosition!.altitude!.toStringAsFixed(1)} m'
+                            : '--',
+                        style: const TextStyle(fontSize: 14, color: Colors.white),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.info_outline, size: 12, color: Colors.red),
+                    ],
+                  ),
+                ),
 
-                    const SizedBox(height: 48),
+                const SizedBox(height: 48),
 
                 // Bearing Type Toggle
                 Padding(
@@ -264,136 +242,119 @@ class _HomeScreenState extends State<HomeScreen> {
                         icon: Icons.compass_calibration,
                         label: 'Magnetic',
                         isActive: !_showTrueBearing,
-                        onPressed: () {
-                          setState(() => _showTrueBearing = false);
-                        },
+                        onPressed: () => setState(() => _showTrueBearing = false),
                       ),
                       const SizedBox(width: 16),
                       _buildBearingToggle(
                         icon: Icons.explore,
                         label: 'True North',
                         isActive: _showTrueBearing,
-                        onPressed: () {
-                          setState(() => _showTrueBearing = true);
-                        },
+                        onPressed: () => setState(() => _showTrueBearing = true),
                       ),
                     ],
                   ),
                 ),
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
                 // Quick Actions
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.navigation,
-                          label: 'Waypoints',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const WaypointManagerScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.speed,
-                          label: 'Speed: ${compassProvider.speed.toStringAsFixed(1)} km/h',
-                          onPressed: () {
-                            // Speed is already displayed, maybe show detailed speed info
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Current Speed: ${compassProvider.speed.toStringAsFixed(1)} m/s\n'
-                                  'GPS Accuracy: ${compassProvider.accuracy.toStringAsFixed(1)}m'
-                                ),
-                                duration: const Duration(seconds: 3),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                    const SizedBox(height: 100), // Space for bottom nav
-                  ],
-                ),
-              ),
-
-              // Top indicators
-              Positioned(
-                top: 20,
-                left: 20,
-                right: 60,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // GPS Status
-                    Row(
+                  child: Consumer<CompassProvider>(
+                    builder: (context, provider, _) => Row(
                       children: [
-                        Icon(
-                          compassProvider.hasGpsLock ? Icons.gps_fixed : Icons.gps_off,
-                          color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                          size: 20,
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.navigation,
+                            label: 'Waypoints',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const WaypointManagerScreen()),
+                              );
+                            },
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          compassProvider.hasGpsLock ? 'GPS' : 'No GPS',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.speed,
+                            label: 'Speed: ${provider.speed.toStringAsFixed(1)} km/h',
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Current Speed: ${provider.speed.toStringAsFixed(1)} m/s\n'
+                                      'GPS Accuracy: ${provider.accuracy.toStringAsFixed(1)}m'),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
                     ),
-                    // Accuracy
-                    if (compassProvider.accuracy > 0)
+                  ),
+                ),
+
+                const SizedBox(height: 100), // Space for bottom nav
+              ],
+            ),
+          ),
+
+          // Status indicators at top
+          Positioned(
+            top: 20,
+            left: 20,
+            right: 60,
+            child: Consumer<CompassProvider>(
+              builder: (context, provider, _) => Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        provider.hasGpsLock ? Icons.gps_fixed : Icons.gps_off,
+                        color: provider.hasGpsLock ? Colors.green : Colors.red,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        '${compassProvider.accuracy.toStringAsFixed(0)}m',
-                        style: const TextStyle(
+                        provider.hasGpsLock ? 'GPS' : 'No GPS',
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: provider.hasGpsLock ? Colors.green : Colors.red,
                         ),
                       ),
-                  ],
-                ),
-              ),
-
-              // Settings icon top right
-              Positioned(
-                top: 20,
-                right: 20,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.settings_outlined,
-                    color: Colors.white,
-                    size: 28,
+                    ],
                   ),
-                  onPressed: () => _showSettingsBottomSheet(context),
-                ),
+                  if (provider.accuracy > 0)
+                    Text(
+                      '${provider.accuracy.toStringAsFixed(0)}m',
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                ],
               ),
+            ),
+          ),
 
-              // Bottom Navigation (4 tabs)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildBottomNavigation(),
-              ),
-            ],
-          );
-        },
+          // Settings icon top right
+          Positioned(
+            top: 20,
+            right: 20,
+            child: IconButton(
+              icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 28),
+              onPressed: () => _showSettingsBottomSheet(context),
+            ),
+          ),
+
+          // Bottom Navigation
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildBottomNavigation(),
+          ),
+        ],
       ),
     );
   }

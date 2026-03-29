@@ -97,7 +97,7 @@ class LevelScreen extends StatelessWidget {
   }
 }
 
-class LevelBubble extends StatelessWidget {
+class LevelBubble extends StatefulWidget {
   final double pitch;
   final double roll;
 
@@ -108,41 +108,62 @@ class LevelBubble extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<LevelBubble> createState() => _LevelBubbleState();
+}
+
+class _LevelBubbleState extends State<LevelBubble> {
+  late Offset _initialOffset;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final targetOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
+
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Grid lines
-        CustomPaint(
-          size: const Size(300, 300),
-          painter: LevelGridPainter(),
+        // Static Grid Lines - Isolated with RepaintBoundary
+        const RepaintBoundary(
+          child: CustomPaint(
+            size: Size(300, 300),
+            painter: LevelGridPainter(),
+          ),
         ),
-        // Bubble
-        Transform.translate(
-          offset: Offset(
-            roll * 2, // Scale the movement
-            pitch * 2,
-          ),
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.cyan,
-              boxShadow: [
-                BoxShadow(
+        // Bubble - Smoothly animated movement
+        TweenAnimationBuilder<Offset>(
+          tween: Tween<Offset>(begin: _initialOffset, end: targetOffset),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          builder: (context, animatedOffset, _) {
+            return Transform.translate(
+              offset: animatedOffset,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
                   color: Colors.cyan,
-                  blurRadius: 10,
-                  spreadRadius: 2,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.cyan,
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         // Center target
         Container(
-          width: 4,
-          height: 4,
+          width: 6,
+          height: 6,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.red,

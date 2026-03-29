@@ -15,10 +15,10 @@ class CompassProvider extends ChangeNotifier {
   bool _hasGpsLock = false;
 
   // Smoothing / stability parameters
-  static const double _alphaFilter = 0.12; // low-pass smoothing
-  static const int _minIntervalMs = 80; // throttle sensor updates
-  static const double _minBearingDelta = 0.2; // degrees to notify
-  static const double _minOrientationDelta = 0.5; // degrees to notify
+  static const double _alphaFilter = 0.15; // slightly more responsive
+  static const int _minIntervalMs = 40; // 25 FPS sensor updates (UI will interpolate)
+  static const double _minBearingDelta = 0.1; // lower threshold for smoother movement
+  static const double _minOrientationDelta = 0.2; // lower threshold
 
   List<double> _lastMagnetometer = [0.0, 0.0, 0.0];
   List<double> _lastAccelerometer = [0.0, 0.0, 0.0];
