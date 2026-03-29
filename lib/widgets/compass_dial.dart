@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-class CompassDial extends StatelessWidget {
+class CompassDial extends StatefulWidget {
   final double bearing;
   final double trueBearing;
   final bool showTrueBearing;
@@ -14,17 +14,71 @@ class CompassDial extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<CompassDial> createState() => _CompassDialState();
+}
+
+class _CompassDialState extends State<CompassDial>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  double _previousBearing = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousBearing = widget.bearing;
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: _previousBearing,
+      end: widget.bearing,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+  }
+
+  @override
+  void didUpdateWidget(CompassDial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bearing != widget.bearing) {
+      _previousBearing = _animation.value;
+      _animation = Tween<double>(
+        begin: _previousBearing,
+        end: widget.bearing,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ));
+      _animationController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return CustomPaint(
-      painter: CompassPainter(
-        bearing: bearing,
-        trueBearing: trueBearing,
-        showTrueBearing: showTrueBearing,
-        isDark: isDark,
-      ),
-      size: const Size(300, 300),
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: CompassPainter(
+            bearing: _animation.value,
+            trueBearing: widget.trueBearing,
+            showTrueBearing: widget.showTrueBearing,
+            isDark: isDark,
+          ),
+          size: const Size(300, 300),
+        );
+      },
     );
   }
 }
@@ -47,17 +101,17 @@ class CompassPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Draw gradient background
+    // Draw gradient background like iCompass
     final gradientPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          Colors.grey[800]!,
-          Colors.grey[900]!,
+          const Color(0xFF2C2C2C),
+          const Color(0xFF1A1A1A),
           Colors.black,
         ],
-        stops: const [0.0, 0.6, 1.0],
+        stops: const [0.0, 0.7, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-    
+
     canvas.drawCircle(center, radius, gradientPaint);
 
     // Draw multiple rings for depth
@@ -113,21 +167,22 @@ class CompassPainter extends CustomPainter {
   }
 
   void _drawCardinalDirections(Canvas canvas, Offset center, double radius, bool isDark) {
-    const directions = ['N', 'S', 'E', 'W'];
-    const angles = [0, 180, 90, 270];
+    const directions = ['N', 'E', 'S', 'W'];
+    const angles = [0, 90, 180, 270];
 
     for (int i = 0; i < directions.length; i++) {
       final angle = angles[i] * pi / 180;
-      final x = center.dx + (radius * 0.6) * sin(angle);
-      final y = center.dy - (radius * 0.6) * cos(angle);
+      final x = center.dx + (radius * 0.5) * sin(angle);
+      final y = center.dy - (radius * 0.5) * cos(angle);
 
       final textPainter = TextPainter(
         text: TextSpan(
           text: directions[i],
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            color: Colors.white.withOpacity(0.9),
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.0,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -141,12 +196,13 @@ class CompassPainter extends CustomPainter {
   }
 
   void _drawDegreeMarkers(Canvas canvas, Offset center, double radius, bool isDark) {
-    for (int i = 0; i < 360; i += 5) {
-      final angle = i * pi / 180;
-      final isRed = i == 0; // North, 12 o'clock
-      final isMainMarker = i % 10 == 0;
+    // Draw main cardinal markers with numbers
+    const cardinalAngles = [0, 90, 180, 270];
+    const cardinalLabels = ['N', 'E', 'S', 'W'];
 
-      final startRadius = radius - 15;
+    for (int i = 0; i < cardinalAngles.length; i++) {
+      final angle = cardinalAngles[i] * pi / 180;
+      final startRadius = radius - 25;
       final endRadius = radius - 5;
 
       final startX = center.dx + startRadius * sin(angle);
@@ -154,13 +210,54 @@ class CompassPainter extends CustomPainter {
       final endX = center.dx + endRadius * sin(angle);
       final endY = center.dy - endRadius * cos(angle);
 
-      // Right side (east) cyan/light blue, rest white
-      final isRightSide = i <= 180;
-      final color = isRed ? Colors.red : isRightSide ? Colors.cyan.withOpacity(0.6) : Colors.white.withOpacity(0.7);
+      final paint = Paint()
+        ..color = Colors.white.withOpacity(0.8)
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(
+        Offset(startX, startY),
+        Offset(endX, endY),
+        paint,
+      );
+
+      // Draw numbers
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: cardinalLabels[i],
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      final labelRadius = radius - 40;
+      final labelX = center.dx + labelRadius * sin(angle);
+      final labelY = center.dy - labelRadius * cos(angle);
+      textPainter.paint(
+        canvas,
+        Offset(labelX - textPainter.width / 2, labelY - textPainter.height / 2),
+      );
+    }
+
+    // Draw smaller tick marks every 10 degrees
+    for (int i = 0; i < 360; i += 10) {
+      if (cardinalAngles.contains(i)) continue; // Skip cardinal points
+      final angle = i * pi / 180;
+      final startRadius = radius - 10;
+      final endRadius = radius - 5;
+
+      final startX = center.dx + startRadius * sin(angle);
+      final startY = center.dy - startRadius * cos(angle);
+      final endX = center.dx + endRadius * sin(angle);
+      final endY = center.dy - endRadius * cos(angle);
 
       final paint = Paint()
-        ..color = color
-        ..strokeWidth = isRed ? 4 : isMainMarker ? 2 : 1
+        ..color = Colors.white.withOpacity(0.4)
+        ..strokeWidth = 1.5
         ..strokeCap = StrokeCap.round;
 
       canvas.drawLine(
@@ -205,24 +302,35 @@ class CompassPainter extends CustomPainter {
   void _drawBearingIndicator(Canvas canvas, Offset center, double radius, double bearing, bool isDark) {
     final angle = bearing * pi / 180;
 
-    // Red needle pointing to bearing
-    final needleLength = radius - 30;
+    // Main needle
+    final needleLength = radius - 40;
     final endX = center.dx + needleLength * sin(angle);
     final endY = center.dy - needleLength * cos(angle);
 
+    // Shadow/glow effect
+    canvas.drawLine(
+      Offset(center.dx + 2, center.dy + 2),
+      Offset(endX + 2, endY + 2),
+      Paint()
+        ..color = Colors.black.withOpacity(0.3)
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Red needle
     canvas.drawLine(
       center,
       Offset(endX, endY),
       Paint()
         ..color = Colors.red
-        ..strokeWidth = 4
+        ..strokeWidth = 5
         ..strokeCap = StrokeCap.round,
     );
 
-    // Draw arrowhead
-    final arrowSize = 15;
-    final angle1 = angle + (150 * pi / 180);
-    final angle2 = angle - (150 * pi / 180);
+    // Arrowhead with glow
+    final arrowSize = 18;
+    final angle1 = angle + (160 * pi / 180);
+    final angle2 = angle - (160 * pi / 180);
 
     final arrow1X = endX + arrowSize * cos(angle1);
     final arrow1Y = endY + arrowSize * sin(angle1);
@@ -235,6 +343,15 @@ class CompassPainter extends CustomPainter {
     path.lineTo(arrow2X, arrow2Y);
     path.close();
 
+    // Shadow
+    canvas.drawPath(
+      path.shift(const Offset(2, 2)),
+      Paint()
+        ..color = Colors.black.withOpacity(0.3)
+        ..style = PaintingStyle.fill,
+    );
+
+    // Arrow
     canvas.drawPath(
       path,
       Paint()
