@@ -165,6 +165,12 @@ class GpsService extends ChangeNotifier {
               accuracy: position.accuracy,
               hasLock: position.accuracy < 50, // Consider locked if accuracy < 50m
             );
+            // New: update declination automatically
+            _compassProvider!.updateLocation(
+              position.latitude, 
+              position.longitude, 
+              position.altitude
+            );
           }
 
           // Resolve address (don't await to avoid blocking)

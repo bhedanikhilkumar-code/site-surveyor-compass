@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // COMPASS SECTION - Only this part rebuilds on bearing change
                 Selector<CompassProvider, double>(
-                  selector: (_, provider) => provider.bearing,
+                  selector: (_, provider) => _showTrueBearing ? provider.trueBearing : provider.bearing,
                   builder: (context, bearing, _) {
                     return Column(
                       children: [

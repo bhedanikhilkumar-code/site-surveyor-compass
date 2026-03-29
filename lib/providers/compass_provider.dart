@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:vector_math/vector_math_64.dart' as v;
+import 'package:geomag/geomag.dart';
 import 'dart:math';
 
 class CompassProvider extends ChangeNotifier {
@@ -15,13 +17,13 @@ class CompassProvider extends ChangeNotifier {
   bool _hasGpsLock = false;
 
   // Smoothing / stability parameters
-  static const double _alphaFilter = 0.15; // slightly more responsive
-  static const int _minIntervalMs = 40; // 25 FPS sensor updates (UI will interpolate)
-  static const double _minBearingDelta = 0.1; // lower threshold for smoother movement
-  static const double _minOrientationDelta = 0.2; // lower threshold
+  static const double _alphaFilter = 0.15; 
+  static const int _minIntervalMs = 40; 
+  static const double _minBearingDelta = 0.1; 
+  static const double _minOrientationDelta = 0.2; 
 
-  List<double> _lastMagnetometer = [0.0, 0.0, 0.0];
-  List<double> _lastAccelerometer = [0.0, 0.0, 0.0];
+  v.Vector3 _accel = v.Vector3.zero();
+  v.Vector3 _mag = v.Vector3.zero();
 
   StreamSubscription<MagnetometerEvent>? _magSub;
   StreamSubscription<AccelerometerEvent>? _accSub;
@@ -51,10 +53,10 @@ class CompassProvider extends ChangeNotifier {
         _lastMagUpdateMs = now;
 
         if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
-        _lastMagnetometer = [event.x, event.y, event.z];
-        _updateBearing();
+        _mag.setValues(event.x, event.y, event.z);
+        _calculateTiltCompensatedHeading();
       }, onError: (e) {
-        // ignore sensor errors — app continues running
+        // ignore sensor errors
       });
 
       _accSub = accelerometerEvents.listen((AccelerometerEvent event) {
@@ -63,45 +65,56 @@ class CompassProvider extends ChangeNotifier {
         _lastAccUpdateMs = now;
 
         if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
-        _lastAccelerometer = [event.x, event.y, event.z];
+        _accel.setValues(event.x, event.y, event.z);
         _updateOrientation();
       }, onError: (e) {
         // ignore
       });
     } catch (e) {
-      // Sensors not available (e.g., desktop) — keep defaults
+      // Sensors not available
     }
   }
 
-  void _updateBearing() {
-    final x = _lastMagnetometer[0];
-    final y = _lastMagnetometer[1];
+  /// THE CORE IMPROVEMENT: Tilt-compensated heading calculation
+  /// Using Cross-Product method for robust results even when device is tilted.
+  void _calculateTiltCompensatedHeading() {
+    if (_accel.length == 0 || _mag.length == 0) return;
 
-    // Measured angle in degrees [0..360)
-    double measured = atan2(y, x) * 180 / pi;
-    measured = (measured + 360) % 360;
+    // 1. East Vector = Magnetic field cross Gravity
+    v.Vector3 east = _mag.cross(_accel);
+    if (east.length == 0) return;
+    east.normalize();
 
-    // Compute shortest angle delta accounting for wrap-around
+    // 2. North Vector = Gravity cross East
+    v.Vector3 north = _accel.cross(east);
+    if (north.length == 0) return;
+    north.normalize();
+
+    // 3. Device's "forward" is Y-axis (0, 1, 0) in local space.
+    // We project it onto our horizontal (North/East) plane.
+    double headingRad = atan2(east.y, north.y);
+    double measured = (headingRad * 180 / pi + 360) % 360;
+
+    // 4. Smooth the result using EMA (Exponential Moving Average)
     double delta = ((measured - _bearing + 540) % 360) - 180;
     double newBearing = (_bearing + delta * _alphaFilter) % 360;
     if (newBearing < 0) newBearing += 360;
 
-    // Only notify when change exceeds threshold to avoid jitter
     if (delta.abs() >= _minBearingDelta) {
       _bearing = newBearing;
       _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
       notifyListeners();
     } else {
-      // keep smoothed value but do not re-render frequently
       _bearing = newBearing;
     }
   }
 
   void _updateOrientation() {
-    final x = _lastAccelerometer[0];
-    final y = _lastAccelerometer[1];
-    final z = _lastAccelerometer[2];
+    final x = _accel.x;
+    final y = _accel.y;
+    final z = _accel.z;
 
+    // Standard pitch/roll from accelerometer
     final newPitch = atan2(y, sqrt(x * x + z * z)) * 180 / pi;
     final newRoll = atan2(x, sqrt(y * y + z * z)) * 180 / pi;
 
@@ -116,9 +129,22 @@ class CompassProvider extends ChangeNotifier {
     }
   }
 
+  /// Automatically update magnetic declination based on GPS location
+  void updateLocation(double lat, double lon, double alt) {
+    try {
+      final geoMag = GeoMag();
+      // Calculate declination for current location and time
+      final result = geoMag.calculate(lat, lon, alt * 3.28084, DateTime.now()); // altitude in feet
+      _magneticDeclination = result.dec;
+      _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
+      notifyListeners();
+    } catch (e) {
+      // fallback if geomag fails
+    }
+  }
+
   void setMagneticDeclination(double declination) {
     _magneticDeclination = declination;
-    // Recompute true bearing immediately
     _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
     notifyListeners();
   }
@@ -127,12 +153,11 @@ class CompassProvider extends ChangeNotifier {
     _speed = speed;
     _accuracy = accuracy;
     _hasGpsLock = hasLock;
-    // No notifyListeners here as this is called frequently from GPS updates
+    // No notifyListeners here
   }
 
   void startCalibration() {
     _isCalibrating = true;
-    // Reset calibration state
     _bearing = 0.0;
     _trueBearing = 0.0;
     notifyListeners();
