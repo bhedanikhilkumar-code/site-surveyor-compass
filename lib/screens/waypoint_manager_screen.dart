@@ -251,17 +251,17 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           ],
         ),
         trailing: PopupMenuButton(
-          itemBuilder: (context) => [
-            PopupMenuItem(
+          itemBuilder: (context) => <PopupMenuEntry<dynamic>>[
+            PopupMenuItem<dynamic>(
               child: const Text('Edit'),
               onTap: () => _showEditWaypointDialog(waypoint),
             ),
-            PopupMenuItem(
+            PopupMenuItem<dynamic>(
               child: const Text('View Details'),
               onTap: () => _showWaypointDetails(waypoint),
             ),
             const PopupMenuDivider(),
-            PopupMenuItem(
+            PopupMenuItem<dynamic>(
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () => _showDeleteConfirmation(waypoint.id, waypoint.name),
             ),

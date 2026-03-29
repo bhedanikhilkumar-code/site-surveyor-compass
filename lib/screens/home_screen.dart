@@ -13,14 +13,19 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   bool _showTrueBearing = true;
   bool _levelCalibrationMode = false;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    // Request permissions and initialize GPS on app start
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final gpsService = context.read<GpsService>();
       gpsService.getInitialPosition();
@@ -28,656 +33,495 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Site Surveyor Compass'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsBottomSheet(context),
+      backgroundColor: const Color(0xFF000000),
+      body: Stack(
+        children: [
+          Consumer3<CompassProvider, GpsService, WaypointService>(
+            builder: (context, compassProvider, gpsService, waypointService, _) {
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 60), // Space for settings icon
+
+                    // Main Compass Dial
+                    Center(
+                      child: CompassDial(
+                        bearing: compassProvider.bearing,
+                        trueBearing: compassProvider.trueBearing,
+                        showTrueBearing: _showTrueBearing,
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Direction Text
+                    Text(
+                      compassProvider.getCardinalDirection(compassProvider.bearing),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white,
+                        fontFamily: 'sans-serif',
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Coordinates Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildCoordinateColumn(
+                            'NL',
+                            gpsService.currentPosition != null
+                                ? _formatCoordinate(gpsService.currentPosition!.latitude, isLatitude: true)
+                                : '--',
+                          ),
+                          _buildCoordinateColumn(
+                            'EL',
+                            gpsService.currentPosition != null
+                                ? _formatCoordinate(gpsService.currentPosition!.longitude, isLatitude: false)
+                                : '--',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Elevation
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Elevation',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          gpsService.currentPosition?.altitude != null
+                              ? '${gpsService.currentPosition!.altitude!.toStringAsFixed(1)} m'
+                              : '--',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.info_outline,
+                          size: 12,
+                          color: Colors.red,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 48),
+
+                    // Bearing Type Toggle
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildToggleButton(
+                              'Magnetic',
+                              !_showTrueBearing,
+                              () {
+                                setState(() => _showTrueBearing = false);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildToggleButton(
+                              'True Bearing',
+                              _showTrueBearing,
+                              () {
+                                setState(() => _showTrueBearing = true);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Quick Actions
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              icon: Icons.navigation,
+                              label: 'Waypoints',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const WaypointManagerScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildActionButton(
+                              icon: Icons.settings,
+                              label: 'Settings',
+                              onPressed: () =>
+                                  _showSettingsBottomSheet(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 100), // Space for bottom nav
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // Settings icon top right
+          Positioned(
+            top: 20,
+            right: 20,
+            child: IconButton(
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: Colors.white,
+                size: 28,
+              ),
+              onPressed: () => _showSettingsBottomSheet(context),
+            ),
+          ),
+
+          // Bottom Navigation
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildBottomNavigation(),
           ),
         ],
       ),
-      body: Consumer3<CompassProvider, GpsService, WaypointService>(
-        builder: (context, compassProvider, gpsService, waypointService, _) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                
-                // Main Compass Dial
-                Center(
-                  child: CompassDial(
-                    bearing: compassProvider.bearing,
-                    trueBearing: compassProvider.trueBearing,
-                    showTrueBearing: _showTrueBearing,
-                    cardinalDirection: compassProvider.getCardinalDirection(
-                      compassProvider.bearing,
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
+    );
+  }
 
-                // Bearing Info Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildBearingInfoColumn(
-                                'Magnetic Bearing',
-                                '${compassProvider.bearing.toStringAsFixed(1)}°',
-                                Colors.red,
-                              ),
-                              _buildBearingInfoColumn(
-                                'True Bearing',
-                                '${compassProvider.trueBearing.toStringAsFixed(1)}°',
-                                Colors.blue,
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 20),
-                          Text(
-                            'Cardinal: ${compassProvider.getCardinalDirection(compassProvider.bearing)}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+  Widget _buildCoordinateColumn(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[500],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.white,
+            fontFamily: 'monospace',
+          ),
+        ),
+      ],
+    );
+  }
 
-                const SizedBox(height: 20),
+  String _formatCoordinate(double coord, {required bool isLatitude}) {
+    final absCoord = coord.abs();
+    final degrees = absCoord.floor();
+    final minutesFloat = (absCoord - degrees) * 60;
+    final minutes = minutesFloat.floor();
+    final seconds = ((minutesFloat - minutes) * 60).round();
 
-                // GPS Location Card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'GPS Location',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          if (gpsService.locationError != null)
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.red[100],
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.warning, size: 16, color: Colors.red),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      gpsService.locationError!,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (gpsService.currentPosition != null)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLocationRow(
-                                  '📍',
-                                  'Location',
-                                  gpsService.getLocationString(),
-                                ),
-                                const SizedBox(height: 8),
-                                _buildLocationRow(
-                                  '📏',
-                                  'Altitude',
-                                  gpsService.getAltitudeString(),
-                                ),
-                                const SizedBox(height: 8),
-                                _buildLocationRow(
-                                  '🎯',
-                                  'Accuracy',
-                                  gpsService.getAccuracyString(),
-                                ),
-                              ],
-                            )
-                          else
-                            const Center(
-                              child: SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+    return '$degrees°${minutes.toString().padLeft(2, '0')}\'${seconds.toString().padLeft(2, '0')}"';
+  }
 
-                const SizedBox(height: 20),
-
-                // Orientation Info (Pitch & Roll)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Surface Level (Accelerometer)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildOrientationColumn(
-                                'Pitch',
-                                '${compassProvider.pitch.toStringAsFixed(1)}°',
-                                compassProvider.pitch.abs() < 2,
-                              ),
-                              _buildOrientationColumn(
-                                'Roll',
-                                '${compassProvider.roll.toStringAsFixed(1)}°',
-                                compassProvider.roll.abs() < 2,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Bubble Level Visualization
-                _buildBubbleLevel(compassProvider),
-
-                const SizedBox(height: 30),
-
-                // Action Buttons
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.tonal(
-                          onPressed: () {
-                            setState(() {
-                              _showTrueBearing = !_showTrueBearing;
-                            });
-                          },
-                          child: Text(
-                            _showTrueBearing ? 'Hide True N' : 'Show True N',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Calibration placeholder'),
-                              ),
-                            );
-                          },
-                          child: const Text('Calibrate'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Waypoint Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => WaypointManagerScreen(
-                              waypointService: waypointService,
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text('📍 Manage Waypoints'),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Quick Save Waypoint Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => _showQuickSaveDialog(
-                        context,
-                        waypointService,
-                        compassProvider,
-                        gpsService,
-                      ),
-                      child: const Text('⭐ Save Current Location'),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-              ],
-            ),
-          );
-        },
+  Widget _buildBottomNavigation() {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey[700]!,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildBottomNavItem(
+            icon: Icons.explore,
+            label: 'Compass',
+            isActive: true,
+            onPressed: () {}, // Already on compass
+          ),
+          _buildBottomNavItem(
+            icon: Icons.aspect_ratio,
+            label: 'Level',
+            isActive: false,
+            onPressed: () {
+              // Navigate to level screen, but for now do nothing
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildLocationRow(String icon, String label, String value) {
+  Widget _buildBottomNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? Colors.white : Colors.grey[500],
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive ? Colors.white : Colors.grey[500],
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationInfo(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.white54,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.cyan,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildElevationInfo(String value) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(icon),
-        const SizedBox(width: 8),
+        Icon(Icons.height, size: 16, color: Colors.white54),
+        const SizedBox(width: 6),
         Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
+          'Elevation: ',
+          style: TextStyle(fontSize: 12, color: Colors.white54),
         ),
-        const Spacer(),
         Text(
           value,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 14,
+            color: Colors.cyan,
+            fontFamily: 'monospace',
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBearingInfoColumn(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOrientationColumn(String label, String value, bool isLevel) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: isLevel ? Colors.green : Colors.orange,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBubbleLevel(CompassProvider compassProvider) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Digital Bubble Level',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
+  Widget _buildToggleButton(
+    String label,
+    bool isActive,
+    VoidCallback onPressed,
+  ) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          gradient: isActive
+              ? LinearGradient(
+                  colors: [
+                    Colors.cyan.withOpacity(0.8),
+                    Colors.blue.withOpacity(0.6),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : LinearGradient(
+                  colors: [
+                    Colors.grey[800]!,
+                    Colors.grey[850]!,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[100],
-                ),
-                child: CustomPaint(
-                  painter: BubbleLevelPainter(
-                    pitch: compassProvider.pitch,
-                    roll: compassProvider.roll,
+          border: Border.all(
+            color: isActive ? Colors.cyan : Colors.grey[700]!,
+            width: 1.5,
+          ),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.cyan.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1,
                   ),
-                  size: Size.infinite,
-                ),
-              ),
+                ]
+              : [],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isActive ? Colors.black87 : Colors.white70,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              Colors.grey[800]!,
+              Colors.grey[850]!,
             ],
           ),
+          border: Border.all(
+            color: Colors.cyan.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.cyan, size: 24),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white70,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   void _showSettingsBottomSheet(BuildContext context) {
-    final compassProvider = Provider.of<CompassProvider>(context, listen: false);
-    final gpsService = Provider.of<GpsService>(context, listen: false);
-    
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Magnetic Declination'),
-                subtitle: Text(
-                  '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
-                ),
-                trailing: const Icon(Icons.edit),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showDeclinationDialog(context, compassProvider);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                title: const Text('GPS Status'),
-                subtitle: gpsService.isListening
-                    ? const Text('Tracking location')
-                    : const Text('Tap to enable tracking'),
-                trailing: Icon(
-                  gpsService.isListening ? Icons.location_on : Icons.location_off,
-                ),
-                onTap: () {
-                  if (gpsService.isListening) {
-                    gpsService.stopLocationUpdates();
-                  } else {
-                    gpsService.startLocationUpdates();
-                  }
-                  Navigator.pop(context);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                title: const Text('Calibrate Compass'),
-                subtitle: const Text('Reduce magnetic interference'),
-                onTap: () {
-                  Navigator.pop(context);
-                  compassProvider.startCalibration();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDeclinationDialog(BuildContext context, CompassProvider compassProvider) {
-    final controller = TextEditingController(
-      text: compassProvider.magneticDeclination.toStringAsFixed(1),
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Magnetic Declination'),
-          content: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(
-              signed: true,
-              decimal: true,
-            ),
-            decoration: const InputDecoration(
-              hintText: 'Enter declination in degrees',
-              suffixText: '°',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final value = double.tryParse(controller.text) ?? 0;
-                compassProvider.setMagneticDeclination(value);
+      backgroundColor: Colors.grey[900],
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.compass_calibration),
+              title: const Text('Calibrate Compass'),
+              onTap: () {
                 Navigator.pop(context);
+                setState(() => _levelCalibrationMode = true);
               },
-              child: const Text('Set'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_location),
+              title: const Text('Manage Waypoints'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WaypointManagerScreen(),
+                  ),
+                );
+              },
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _showQuickSaveDialog(
-    BuildContext context,
-    WaypointService waypointService,
-    CompassProvider compassProvider,
-    GpsService gpsService,
-  ) {
-    if (gpsService.currentPosition == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('GPS location not available yet'),
-        ),
-      );
-      return;
-    }
-
-    final nameController = TextEditingController();
-    final notesController = TextEditingController();
-
+  void _showAboutDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save Waypoint'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Waypoint Name',
-                  hintText: 'e.g., North Corner',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (optional)',
-                  hintText: 'Add any additional information...',
-                ),
-              ),
-            ],
-          ),
+        backgroundColor: Colors.grey[900],
+        title: const Text('Site Surveyor Compass'),
+        content: const Text(
+          'Professional Compass & GPS Navigation\n\n'
+          '• Accurate magnetic and true bearing\n'
+          '• Real-time GPS coordinates\n'
+          '• Elevation tracking\n'
+          '• Waypoint management\n'
+          '• Data export',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              try {
-                final name = nameController.text.trim();
-                if (name.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a waypoint name')),
-                  );
-                  return;
-                }
-
-                await waypointService.createWaypoint(
-                  name: name,
-                  bearing: compassProvider.bearing,
-                  latitude: gpsService.currentPosition!.latitude,
-                  longitude: gpsService.currentPosition!.longitude,
-                  altitude: gpsService.currentPosition!.altitude,
-                  notes: notesController.text,
-                );
-
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Waypoint saved successfully'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Save'),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
-  }
-}
-
-class BubbleLevelPainter extends CustomPainter {
-  final double pitch;
-  final double roll;
-
-  BubbleLevelPainter({
-    required this.pitch,
-    required this.roll,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    
-    // Draw crosshair center
-    canvas.drawLine(
-      Offset(center.dx - 20, center.dy),
-      Offset(center.dx + 20, center.dy),
-      Paint()..color = Colors.grey[300]!,
-    );
-    canvas.drawLine(
-      Offset(center.dx, center.dy - 20),
-      Offset(center.dx, center.dy + 20),
-      Paint()..color = Colors.grey[300]!,
-    );
-
-    // Calculate bubble position from pitch and roll
-    final bubbleX = center.dx + (roll * 1.5).clamp(-30, 30);
-    final bubbleY = center.dy + (pitch * 1.5).clamp(-30, 30);
-
-    // Draw bubble
-    final isLevel = pitch.abs() < 2 && roll.abs() < 2;
-    canvas.drawCircle(
-      Offset(bubbleX, bubbleY),
-      12,
-      Paint()
-        ..color = isLevel ? Colors.green : Colors.orange
-        ..style = PaintingStyle.fill,
-    );
-
-    // Draw bubble border
-    canvas.drawCircle(
-      Offset(bubbleX, bubbleY),
-      12,
-      Paint()
-        ..color = isLevel ? Colors.green[700]! : Colors.orange[700]!
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-  }
-
-  @override
-  bool shouldRepaint(BubbleLevelPainter oldDelegate) {
-    return oldDelegate.pitch != pitch || oldDelegate.roll != roll;
   }
 }
