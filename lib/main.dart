@@ -32,16 +32,26 @@ void main() async {
 }
 
 Future<void> _requestPermissions() async {
+  // Request all required permissions for GPS and sensors
   final statuses = await [
     Permission.location,
+    Permission.locationWhenInUse,
+    Permission.locationAlways,
     Permission.sensors,
   ].request();
 
-  if (statuses[Permission.location]!.isDenied) {
-    print('Location permission denied');
+  // Check if location permissions are granted
+  if (statuses[Permission.location]!.isDenied ||
+      statuses[Permission.locationWhenInUse]!.isDenied) {
+    print('Location permission denied - GPS will not work');
+  } else {
+    print('Location permission granted - GPS enabled');
   }
+
   if (statuses[Permission.sensors]!.isDenied) {
-    print('Sensor permission denied');
+    print('Sensor permission denied - Compass may not work');
+  } else {
+    print('Sensor permission granted - Compass enabled');
   }
 }
 

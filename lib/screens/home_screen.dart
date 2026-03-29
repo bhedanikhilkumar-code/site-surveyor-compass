@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/compass_provider.dart';
 import '../services/gps_service.dart';
 import '../services/waypoint_service.dart';
@@ -21,9 +22,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final gpsService = context.read<GpsService>();
-      gpsService.getInitialPosition();
+      // Get initial position
+      await gpsService.getInitialPosition();
+      // Start continuous location updates for real-time GPS tracking
+      await gpsService.startLocationUpdates(
+        accuracy: LocationAccuracy.bestForNavigation,
+        intervalMs: 1000,
+        distanceFilterMeters: 5,
+      );
     });
   }
 
