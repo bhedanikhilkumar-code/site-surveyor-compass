@@ -127,6 +127,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.white70,
                                 ),
                               ),
+                              const SizedBox(width: 16),
+                              Icon(
+                                Icons.compass_calibration,
+                                size: 16,
+                                color: Colors.cyan,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.cyan,
+                                ),
+                              ),
                             ],
                           ),
                         ],
