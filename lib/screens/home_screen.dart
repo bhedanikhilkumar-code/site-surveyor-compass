@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../providers/compass_provider.dart';
 import '../services/gps_service.dart';
-import '../services/waypoint_service.dart';
 import '../widgets/compass_dial.dart';
 import 'waypoint_manager_screen.dart';
 import 'level_screen.dart';
@@ -17,16 +17,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _showTrueBearing = true;
+  String _currentTime = '';
+  String _currentDate = '';
+  Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
+    _updateClock();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final gpsService = context.read<GpsService>();
-      // Get initial position
       await gpsService.getInitialPosition();
-      // Start continuous location updates for real-time GPS tracking
       await gpsService.startLocationUpdates(
         accuracy: LocationAccuracy.bestForNavigation,
         intervalMs: 1000,
@@ -35,8 +38,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _updateClock() {
+    final now = DateTime.now();
+    setState(() {
+      _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      _currentDate = '${now.day.toString().padLeft(2, '0')}';
+    });
+  }
+
   @override
   void dispose() {
+    _clockTimer?.cancel();
     super.dispose();
   }
 
@@ -79,134 +91,151 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 24),
 
-                // GPS & NAVIGATION INFO - Rebuilds on GPS or Provider status changes
-                Consumer2<CompassProvider, GpsService>(
-                  builder: (context, compassProvider, gpsService, _) {
+                // GPS COORDINATES - Only rebuilds when GPS changes
+                Consumer<GpsService>(
+                  builder: (context, gpsService, _) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildCoordinateColumn(
+                              'NL',
+                              gpsService.latitude != null
+                                  ? _formatCoordinate(gpsService.latitude!.abs(), isLatitude: true) +
+                                    (gpsService.latitude! >= 0 ? ' N' : ' S')
+                                  : '--',
+                            ),
+                            _buildCoordinateColumn(
+                              'EL',
+                              gpsService.longitude != null
+                                  ? _formatCoordinate(gpsService.longitude!.abs(), isLatitude: false) +
+                                    (gpsService.longitude! >= 0 ? ' E' : ' W')
+                                  : '--',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Address and GPS Info
+                        if (gpsService.address != null)
+                          Text(
+                            gpsService.address!,
+                            style: const TextStyle(fontSize: 12, color: Colors.white70),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // GPS STATUS & NAV DATA - Rebuilds on compass changes
+                Selector<CompassProvider, _NavData>(
+                  selector: (_, p) => _NavData(
+                    speed: p.speed,
+                    accuracy: p.accuracy,
+                    hasGpsLock: p.hasGpsLock,
+                    declination: p.magneticDeclination,
+                  ),
+                  builder: (context, navData, child) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         children: [
-                          // Coordinates
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildCoordinateColumn(
-                                'NL',
-                                gpsService.latitude != null
-                                    ? _formatCoordinate(gpsService.latitude!.abs(), isLatitude: true) +
-                                      (gpsService.latitude! >= 0 ? ' N' : ' S')
-                                    : '--',
+                              Icon(
+                                Icons.gps_fixed,
+                                size: 14,
+                                color: navData.hasGpsLock ? Colors.green : Colors.red,
                               ),
-                              _buildCoordinateColumn(
-                                'EL',
-                                gpsService.longitude != null
-                                    ? _formatCoordinate(gpsService.longitude!.abs(), isLatitude: false) +
-                                      (gpsService.longitude! >= 0 ? ' E' : ' W')
-                                    : '--',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // Address and GPS Info
-                          Column(
-                            children: [
-                              if (gpsService.address != null)
-                                Text(
-                                  gpsService.address!,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white70,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 4),
+                              Text(
+                                navData.accuracy > 0
+                                    ? '${navData.accuracy.toStringAsFixed(0)}m accuracy'
+                                    : 'No GPS lock',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: navData.hasGpsLock ? Colors.green : Colors.red,
                                 ),
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.gps_fixed,
-                                    size: 14,
-                                    color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    gpsService.accuracy != null
-                                        ? '${gpsService.accuracy!.toStringAsFixed(0)}m accuracy'
-                                        : 'No GPS lock',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: compassProvider.hasGpsLock ? Colors.green : Colors.red,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ],
                           ),
-                          
                           const SizedBox(height: 16),
-
-                          // Navigation Data Grid
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _buildNavDataColumn(
                                 Icons.speed,
-                                '${compassProvider.speed.toStringAsFixed(1)}',
+                                '${navData.speed.toStringAsFixed(1)}',
                                 'km/h',
-                                compassProvider.hasGpsLock ? Colors.green : Colors.orange,
+                                navData.hasGpsLock ? Colors.green : Colors.orange,
                               ),
                               _buildNavDataColumn(
                                 Icons.gps_fixed,
-                                compassProvider.accuracy > 0
-                                    ? '${compassProvider.accuracy.toStringAsFixed(0)}'
+                                navData.accuracy > 0
+                                    ? '${navData.accuracy.toStringAsFixed(0)}'
                                     : '--',
                                 'meters',
-                                compassProvider.hasGpsLock ? Colors.green : Colors.red,
+                                navData.hasGpsLock ? Colors.green : Colors.red,
                               ),
                               _buildNavDataColumn(
                                 Icons.compass_calibration,
-                                '${compassProvider.magneticDeclination.toStringAsFixed(1)}°',
+                                '${navData.declination.toStringAsFixed(1)}°',
                                 'decl.',
                                 Colors.cyan,
                               ),
-                              _buildNavDataColumn(
-                                Icons.height,
-                                gpsService.altitude != null
-                                    ? '${gpsService.altitude!.toStringAsFixed(0)}'
-                                    : '--',
-                                'meters',
-                                gpsService.altitude != null ? Colors.blue : Colors.grey,
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildNavDataColumn(
-                                Icons.access_time,
-                                DateTime.now().toString().substring(11, 16),
-                                DateTime.now().toString().substring(8, 10),
-                                Colors.amber,
-                              ),
-                              _buildNavDataColumn(
-                                _showTrueBearing ? Icons.explore : Icons.compass_calibration,
-                                _showTrueBearing ? 'TRUE' : 'MAG',
-                                'north',
-                                _showTrueBearing ? Colors.blue : Colors.red,
-                              ),
-                              _buildNavDataColumn(Icons.wb_sunny, '06:30', 'sunrise', Colors.orange),
-                              _buildNavDataColumn(Icons.brightness_2, '18:45', 'sunset', Colors.purple),
+                              child!, // altitude from GpsService
                             ],
                           ),
                         ],
                       ),
                     );
                   },
+                  child: Consumer<GpsService>(
+                    builder: (context, gpsService, _) => _buildNavDataColumn(
+                      Icons.height,
+                      gpsService.altitude != null
+                          ? '${gpsService.altitude!.toStringAsFixed(0)}'
+                          : '--',
+                      'meters',
+                      gpsService.altitude != null ? Colors.blue : Colors.grey,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Time & Bearing Info Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildNavDataColumn(
+                        Icons.access_time,
+                        _currentTime,
+                        _currentDate,
+                        Colors.amber,
+                      ),
+                      Selector<CompassProvider, bool>(
+                        selector: (_, p) => _showTrueBearing,
+                        builder: (context, isTrue, _) => _buildNavDataColumn(
+                          isTrue ? Icons.explore : Icons.compass_calibration,
+                          isTrue ? 'TRUE' : 'MAG',
+                          'north',
+                          isTrue ? Colors.blue : Colors.red,
+                        ),
+                      ),
+                      _buildNavDataColumn(Icons.wb_sunny, '06:30', 'sunrise', Colors.orange),
+                      _buildNavDataColumn(Icons.brightness_2, '18:45', 'sunset', Colors.purple),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 24),
@@ -617,6 +646,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
+class _NavData {
+  final double speed;
+  final double accuracy;
+  final bool hasGpsLock;
+  final double declination;
 
+  const _NavData({
+    required this.speed,
+    required this.accuracy,
+    required this.hasGpsLock,
+    required this.declination,
+  });
 }

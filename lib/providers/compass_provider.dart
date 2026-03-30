@@ -12,24 +12,28 @@ class CompassProvider extends ChangeNotifier {
   double _roll = 0.0;
   double _magneticDeclination = 0.0;
   bool _isCalibrating = false;
-  double _speed = 0.0; // GPS speed in m/s
-  double _accuracy = 0.0; // GPS accuracy in meters
+  double _speed = 0.0;
+  double _accuracy = 0.0;
   bool _hasGpsLock = false;
 
-  // Smoothing / stability parameters
-  static const double _alphaFilter = 0.15; 
-  static const int _minIntervalMs = 40; 
-  static const double _minBearingDelta = 0.1; 
-  static const double _minOrientationDelta = 0.2; 
+  // SENSOR SMOOTHING
+  // We filter raw sensors first for stability, then the heading for smoothness.
+  static const double _sensorAlpha = 0.15; // Slightly less smoothing for responsiveness
+  static const double _bearingAlpha = 0.2; // Faster bearing updates
+  static const int _minIntervalMs = 50; // ~20 FPS updates (less jank than 33 FPS)
 
-  v.Vector3 _accel = v.Vector3.zero();
-  v.Vector3 _mag = v.Vector3.zero();
+  v.Vector3 _accelFiltered = v.Vector3.zero();
+  v.Vector3 _magFiltered = v.Vector3.zero();
+  
+  // For basic auto-calibration (Hard-iron offset removal)
+  v.Vector3 _magMin = v.Vector3.all(double.infinity);
+  v.Vector3 _magMax = v.Vector3.all(double.negativeInfinity);
+  v.Vector3 _magOffset = v.Vector3.zero();
 
   StreamSubscription<MagnetometerEvent>? _magSub;
   StreamSubscription<AccelerometerEvent>? _accSub;
 
-  int _lastMagUpdateMs = 0;
-  int _lastAccUpdateMs = 0;
+  int _lastUpdateMs = 0;
 
   double get bearing => _bearing;
   double get trueBearing => _trueBearing;
@@ -47,99 +51,121 @@ class CompassProvider extends ChangeNotifier {
 
   void _initializeSensors() {
     try {
-      _magSub = magnetometerEvents.listen((MagnetometerEvent event) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - _lastMagUpdateMs < _minIntervalMs) return;
-        _lastMagUpdateMs = now;
-
-        if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
-        _mag.setValues(event.x, event.y, event.z);
-        _calculateTiltCompensatedHeading();
-      }, onError: (e) {
-        // ignore sensor errors
+      _accSub = accelerometerEvents.listen((AccelerometerEvent event) {
+        if (event.x.isNaN) return;
+        // Low-pass filter raw accelerometer
+        _accelFiltered.x = _accelFiltered.x + _sensorAlpha * (event.x - _accelFiltered.x);
+        _accelFiltered.y = _accelFiltered.y + _sensorAlpha * (event.y - _accelFiltered.y);
+        _accelFiltered.z = _accelFiltered.z + _sensorAlpha * (event.z - _accelFiltered.z);
+        _updateCalculations();
       });
 
-      _accSub = accelerometerEvents.listen((AccelerometerEvent event) {
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now - _lastAccUpdateMs < _minIntervalMs) return;
-        _lastAccUpdateMs = now;
+      _magSub = magnetometerEvents.listen((MagnetometerEvent event) {
+        if (event.x.isNaN) return;
+        
+        // 1. Basic Auto-Calibration: track min/max to find center offset
+        _updateMagOffsets(event.x, event.y, event.z);
+        
+        // 2. Apply offset (center the magnetic field)
+        double cx = event.x - _magOffset.x;
+        double cy = event.y - _magOffset.y;
+        double cz = event.z - _magOffset.z;
 
-        if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
-        _accel.setValues(event.x, event.y, event.z);
-        _updateOrientation();
-      }, onError: (e) {
-        // ignore
+        // 3. Low-pass filter the centered magnetometer data
+        _magFiltered.x = _magFiltered.x + _sensorAlpha * (cx - _magFiltered.x);
+        _magFiltered.y = _magFiltered.y + _sensorAlpha * (cy - _magFiltered.y);
+        _magFiltered.z = _magFiltered.z + _sensorAlpha * (cz - _magFiltered.z);
+        
+        _updateCalculations();
       });
     } catch (e) {
-      // Sensors not available
+      debugPrint("Compass sensors error: $e");
     }
   }
 
-  /// THE CORE IMPROVEMENT: Tilt-compensated heading calculation
-  /// Using Cross-Product method for robust results even when device is tilted.
-  void _calculateTiltCompensatedHeading() {
-    if (_accel.length == 0 || _mag.length == 0) return;
+  void _updateMagOffsets(double x, double y, double z) {
+    // We update the min/max range of the magnetic field observed
+    _magMin.x = min(_magMin.x, x); _magMax.x = max(_magMax.x, x);
+    _magMin.y = min(_magMin.y, y); _magMax.y = max(_magMax.y, y);
+    _magMin.z = min(_magMin.z, z); _magMax.z = max(_magMax.z, z);
+    
+    // Offset is the center of the sphere
+    if (_magMin.x != double.infinity) {
+      _magOffset.x = (_magMin.x + _magMax.x) / 2;
+      _magOffset.y = (_magMin.y + _magMax.y) / 2;
+      _magOffset.z = (_magMin.z + _magMax.z) / 2;
+    }
+  }
 
-    // 1. East Vector = Magnetic field cross Gravity
-    v.Vector3 east = _mag.cross(_accel);
+  void _updateCalculations() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastUpdateMs < _minIntervalMs) return;
+    _lastUpdateMs = now;
+
+    _calculateOrientation();
+    _calculateHeading();
+    notifyListeners();
+  }
+
+  void _calculateOrientation() {
+    final x = _accelFiltered.x;
+    final y = _accelFiltered.y;
+    final z = _accelFiltered.z;
+
+    // Pitch & Roll for the bubble level
+    _pitch = atan2(y, sqrt(x * x + z * z)) * 180 / pi;
+    _roll = atan2(x, sqrt(y * y + z * z)) * 180 / pi;
+  }
+
+  void _calculateHeading() {
+    if (_accelFiltered.length == 0 || _magFiltered.length == 0) return;
+
+    // 1. Get Earth's coordinate system vectors projected onto device
+    // East = Mag x Accel
+    v.Vector3 east = _magFiltered.cross(_accelFiltered);
     if (east.length == 0) return;
     east.normalize();
 
-    // 2. North Vector = Gravity cross East
-    v.Vector3 north = _accel.cross(east);
+    // North = Accel x East
+    v.Vector3 north = _accelFiltered.cross(east);
     if (north.length == 0) return;
     north.normalize();
 
-    // 3. Device's "forward" is Y-axis (0, 1, 0) in local space.
-    // We project it onto our horizontal (North/East) plane.
+    // 2. Heading is the angle between device's Y-axis (top) and North vector
+    // Standard formula: atan2(Y . East, Y . North)
+    // Since Y = (0, 1, 0), this is just (east.y, north.y)
     double headingRad = atan2(east.y, north.y);
     double measured = (headingRad * 180 / pi + 360) % 360;
 
-    // 4. Smooth the result using EMA (Exponential Moving Average)
+    // 3. Final smoothing of the bearing
     double delta = ((measured - _bearing + 540) % 360) - 180;
-    double newBearing = (_bearing + delta * _alphaFilter) % 360;
-    if (newBearing < 0) newBearing += 360;
-
-    if (delta.abs() >= _minBearingDelta) {
-      _bearing = newBearing;
-      _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
-      notifyListeners();
-    } else {
-      _bearing = newBearing;
-    }
+    _bearing = (_bearing + delta * _bearingAlpha) % 360;
+    if (_bearing < 0) _bearing += 360;
+    
+    _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
   }
 
-  void _updateOrientation() {
-    final x = _accel.x;
-    final y = _accel.y;
-    final z = _accel.z;
+  // Cache GeoMag to avoid recreating on every GPS update
+  GeoMag? _geoMag;
+  double _lastDeclLat = 0;
+  double _lastDeclLon = 0;
 
-    // Standard pitch/roll from accelerometer
-    final newPitch = atan2(y, sqrt(x * x + z * z)) * 180 / pi;
-    final newRoll = atan2(x, sqrt(y * y + z * z)) * 180 / pi;
-
-    if ((newPitch - _pitch).abs() >= _minOrientationDelta ||
-        (newRoll - _roll).abs() >= _minOrientationDelta) {
-      _pitch = newPitch;
-      _roll = newRoll;
-      notifyListeners();
-    } else {
-      _pitch = newPitch;
-      _roll = newRoll;
-    }
-  }
-
-  /// Automatically update magnetic declination based on GPS location
   void updateLocation(double lat, double lon, double alt) {
     try {
-      final geoMag = GeoMag();
-      // Calculate declination for current location and time
-      final result = geoMag.calculate(lat, lon, alt * 3.28084, DateTime.now()); // altitude in feet
+      // Only recalculate if moved more than ~10km from last calc point
+      final latDelta = (lat - _lastDeclLat).abs();
+      final lonDelta = (lon - _lastDeclLon).abs();
+      if (_geoMag != null && latDelta < 0.1 && lonDelta < 0.1) return;
+      
+      _geoMag ??= GeoMag();
+      final result = _geoMag!.calculate(lat, lon, alt * 3.28084, DateTime.now());
       _magneticDeclination = result.dec;
       _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
+      _lastDeclLat = lat;
+      _lastDeclLon = lon;
       notifyListeners();
     } catch (e) {
-      // fallback if geomag fails
+      // ignore
     }
   }
 
@@ -153,26 +179,17 @@ class CompassProvider extends ChangeNotifier {
     _speed = speed;
     _accuracy = accuracy;
     _hasGpsLock = hasLock;
-    // No notifyListeners here
   }
 
-  void startCalibration() {
-    _isCalibrating = true;
-    _bearing = 0.0;
-    _trueBearing = 0.0;
-    notifyListeners();
-  }
-
-  void stopCalibration() {
-    _isCalibrating = false;
+  void resetCalibration() {
+    _magMin = v.Vector3.all(double.infinity);
+    _magMax = v.Vector3.all(double.negativeInfinity);
+    _magOffset = v.Vector3.zero();
     notifyListeners();
   }
 
   String getCardinalDirection(double bearing) {
-    const directions = [
-      'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-      'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
-    ];
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     int index = ((bearing + 11.25) / 22.5).toInt() % 16;
     return directions[index];
   }

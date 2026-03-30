@@ -111,37 +111,61 @@ class LevelBubble extends StatefulWidget {
   State<LevelBubble> createState() => _LevelBubbleState();
 }
 
-class _LevelBubbleState extends State<LevelBubble> {
-  late Offset _initialOffset;
+class _LevelBubbleState extends State<LevelBubble> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+  Offset _currentOffset = Offset.zero;
+  Offset _targetOffset = Offset.zero;
 
   @override
   void initState() {
     super.initState();
-    _initialOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
+    _currentOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
+    _targetOffset = _currentOffset;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _animation = Tween<Offset>(begin: _currentOffset, end: _targetOffset).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void didUpdateWidget(LevelBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pitch != widget.pitch || oldWidget.roll != widget.roll) {
+      _currentOffset = _animation.value;
+      _targetOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
+      _animation = Tween<Offset>(begin: _currentOffset, end: _targetOffset).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+      );
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final targetOffset = Offset(widget.roll * 2.5, widget.pitch * 2.5);
-
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Static Grid Lines - Isolated with RepaintBoundary
-        const RepaintBoundary(
+        RepaintBoundary(
           child: CustomPaint(
-            size: Size(300, 300),
+            size: const Size(300, 300),
             painter: LevelGridPainter(),
           ),
         ),
-        // Bubble - Smoothly animated movement
-        TweenAnimationBuilder<Offset>(
-          tween: Tween<Offset>(begin: _initialOffset, end: targetOffset),
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          builder: (context, animatedOffset, _) {
+        AnimatedBuilder(
+          animation: _animation,
+          builder: (context, _) {
             return Transform.translate(
-              offset: animatedOffset,
+              offset: _animation.value,
               child: Container(
                 width: 24,
                 height: 24,
@@ -160,7 +184,6 @@ class _LevelBubbleState extends State<LevelBubble> {
             );
           },
         ),
-        // Center target
         Container(
           width: 6,
           height: 6,

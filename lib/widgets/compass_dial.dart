@@ -13,41 +13,62 @@ class CompassDial extends StatefulWidget {
   State<CompassDial> createState() => _CompassDialState();
 }
 
-class _CompassDialState extends State<CompassDial> {
-  late double _initialBearing;
+class _CompassDialState extends State<CompassDial> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  double _currentBearing = 0;
   double _targetBearing = 0;
 
   @override
   void initState() {
     super.initState();
-    _initialBearing = widget.bearing;
+    _currentBearing = widget.bearing;
     _targetBearing = widget.bearing;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _animation = Tween<double>(begin: _currentBearing, end: _targetBearing).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
+    );
   }
 
   @override
   void didUpdateWidget(CompassDial oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.bearing != widget.bearing) {
-      // Calculate shortest path rotation
-      double delta = widget.bearing - (_targetBearing % 360);
+      // Capture current animated position
+      _currentBearing = _animation.value;
+      _targetBearing = widget.bearing;
+
+      // Calculate shortest path delta
+      double delta = _targetBearing - (_currentBearing % 360);
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
-      _targetBearing += delta;
+      _targetBearing = _currentBearing + delta;
+
+      // Restart animation from current position to new target
+      _animation = Tween<double>(begin: _currentBearing, end: _targetBearing).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.linear),
+      );
+      _controller.forward(from: 0);
     }
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      // By keeping begin constant and only changing end, 
-      // TweenAnimationBuilder will always animate from its CURRENT value to the new end.
-      tween: Tween<double>(begin: _initialBearing, end: _targetBearing),
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedBearing, child) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
         return RepaintBoundary(
           child: CustomPaint(
-            painter: CompassPainter(bearing: animatedBearing),
+            painter: CompassPainter(bearing: _animation.value),
             size: const Size(300, 300),
           ),
         );
@@ -208,6 +229,21 @@ class CompassPainter extends CustomPainter {
     headingText.paint(
       canvas,
       Offset(center.dx - headingText.width / 2, center.dy - headingText.height / 2),
+    );
+
+    // NEW: PRECISION INDICATOR
+    final precisionText = _getOrCreateText(
+      'HIGH PRECISION TILT-COMPENSATED',
+      TextStyle(
+        color: Colors.cyan.withOpacity(0.5),
+        fontSize: 8,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.2,
+      ),
+    );
+    precisionText.paint(
+      canvas,
+      Offset(center.dx - precisionText.width / 2, center.dy + 40),
     );
   }
 

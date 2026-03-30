@@ -31,7 +31,29 @@ class GpsService extends ChangeNotifier {
     _compassProvider = provider;
   }
 
+  // Throttle address resolution
+  double _lastResolvedLat = 0;
+  double _lastResolvedLng = 0;
+  int _lastResolvedMs = 0;
+  static const int _addressThrottleMs = 30000; // Resolve at most every 30 seconds
+  static const double _addressMinDistance = 0.001; // ~100m
+
   Future<void> _resolveAddress(double lat, double lng) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final latDelta = (lat - _lastResolvedLat).abs();
+    final lngDelta = (lng - _lastResolvedLng).abs();
+    
+    // Skip if resolved recently and hasn't moved far
+    if (now - _lastResolvedMs < _addressThrottleMs &&
+        latDelta < _addressMinDistance &&
+        lngDelta < _addressMinDistance) {
+      return;
+    }
+    
+    _lastResolvedLat = lat;
+    _lastResolvedLng = lng;
+    _lastResolvedMs = now;
+    
     try {
       final placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isNotEmpty) {
@@ -43,7 +65,7 @@ class GpsService extends ChangeNotifier {
         ].where((s) => s?.isNotEmpty ?? false).join(', ');
       }
     } catch (e) {
-      _address = null; // Failed to resolve address
+      _address = null;
     }
   }
 
