@@ -51,7 +51,7 @@ class CompassProvider extends ChangeNotifier {
 
   void _initializeSensors() {
     try {
-      _accSub = accelerometerEvents.listen((AccelerometerEvent event) {
+      _accSub = accelerometerEventStream().listen((AccelerometerEvent event) {
         if (event.x.isNaN) return;
         // Low-pass filter raw accelerometer
         _accelFiltered.x = _accelFiltered.x + _sensorAlpha * (event.x - _accelFiltered.x);
@@ -60,7 +60,7 @@ class CompassProvider extends ChangeNotifier {
         _updateCalculations();
       });
 
-      _magSub = magnetometerEvents.listen((MagnetometerEvent event) {
+      _magSub = magnetometerEventStream().listen((MagnetometerEvent event) {
         if (event.x.isNaN) return;
         
         // 1. Basic Auto-Calibration: track min/max to find center offset

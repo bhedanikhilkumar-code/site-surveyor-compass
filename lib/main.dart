@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
 import 'providers/compass_provider.dart';
 import 'models/waypoint_model.dart';
 import 'services/gps_service.dart';
 import 'services/waypoint_service.dart';
+import 'services/firebase_service.dart';
+import 'services/api_waypoint_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,19 +17,33 @@ void main() async {
   // Request required permissions upfront
   await _requestPermissions();
   
+  // Initialize Firebase (optional - app works without it)
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    print('Firebase initialization failed: $e - Using offline mode');
+  }
+  
   // Initialize Hive for local storage
   await Hive.initFlutter();
   Hive.registerAdapter(WaypointAdapter());
   
-  // Initialize waypoint service
+  // Initialize services
   final waypointService = WaypointService();
   await waypointService.initialize();
+  
+  final firebaseService = FirebaseService();
+  final apiWaypointService = ApiWaypointService(
+    localService: waypointService,
+    firebaseService: firebaseService,
+  );
+  await apiWaypointService.initialize();
 
   // Initialize compass provider
   final compassProvider = CompassProvider();
 
   runApp(SiteSurveyorCompassApp(
-    waypointService: waypointService,
+    apiWaypointService: apiWaypointService,
     compassProvider: compassProvider,
   ));
 }
@@ -56,12 +73,12 @@ Future<void> _requestPermissions() async {
 }
 
 class SiteSurveyorCompassApp extends StatelessWidget {
-  final WaypointService waypointService;
+  final ApiWaypointService apiWaypointService;
   final CompassProvider compassProvider;
 
   const SiteSurveyorCompassApp({
     Key? key,
-    required this.waypointService,
+    required this.apiWaypointService,
     required this.compassProvider,
   }) : super(key: key);
 
@@ -77,7 +94,7 @@ class SiteSurveyorCompassApp extends StatelessWidget {
             return gpsService;
           },
         ),
-        Provider<WaypointService>(create: (_) => waypointService),
+        Provider<ApiWaypointService>(create: (_) => apiWaypointService),
       ],
       child: MaterialApp(
         title: 'Site Surveyor Compass',

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/waypoint_model.dart';
-import '../services/waypoint_service.dart';
+import '../services/api_waypoint_service.dart';
+import 'navigate_waypoint_screen.dart';
 import 'package:intl/intl.dart';
 
 class WaypointManagerScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   @override
   void initState() {
     super.initState();
-    final waypointService = context.read<WaypointService>();
+    final waypointService = context.read<ApiWaypointService>();
     _waypoints = waypointService.getWaypointsSortedByDate();
   }
 
@@ -33,7 +34,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
 
   void _refreshWaypoints() {
     setState(() {
-      final waypointService = context.read<WaypointService>();
+      final waypointService = context.read<ApiWaypointService>();
       if (_isSearching && searchController.text.isNotEmpty) {
         _waypoints = waypointService.searchWaypoints(searchController.text);
       } else {
@@ -43,7 +44,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   }
 
   void _deleteWaypoint(String id) async {
-    final waypointService = context.read<WaypointService>();
+    final waypointService = context.read<ApiWaypointService>();
     await waypointService.deleteWaypoint(id);
     _refreshWaypoints();
     if (mounted) {
@@ -254,6 +255,25 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
         trailing: PopupMenuButton(
           itemBuilder: (context) => <PopupMenuEntry<dynamic>>[
             PopupMenuItem<dynamic>(
+              child: const Row(
+                children: [
+                  Icon(Icons.navigation, size: 18, color: Colors.cyan),
+                  SizedBox(width: 8),
+                  Text('Navigate'),
+                ],
+              ),
+              onTap: () {
+                Future.delayed(Duration.zero, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NavigateWaypointScreen(waypoint: waypoint),
+                    ),
+                  );
+                });
+              },
+            ),
+            PopupMenuItem<dynamic>(
               child: const Text('Edit'),
               onTap: () => _showEditWaypointDialog(waypoint),
             ),
@@ -365,7 +385,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                 final lng = double.tryParse(lngController.text) ?? 0;
                 final alt = double.tryParse(altController.text) ?? 0;
 
-                final waypointService = context.read<WaypointService>();
+                final waypointService = context.read<ApiWaypointService>();
                 await waypointService.createWaypoint(
                   name: name,
                   bearing: bearing,
@@ -430,7 +450,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           FilledButton(
             onPressed: () async {
               try {
-                final waypointService = context.read<WaypointService>();
+                final waypointService = context.read<ApiWaypointService>();
                 await waypointService.updateWaypoint(
                   waypoint.id,
                   waypoint.copyWith(

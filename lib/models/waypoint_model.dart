@@ -69,4 +69,30 @@ class Waypoint {
 
   @override
   String toString() => 'Waypoint(id: $id, name: $name, bearing: $bearing, lat: $latitude, lng: $longitude)';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'bearing': bearing,
+        'latitude': latitude,
+        'longitude': longitude,
+        'altitude': altitude,
+        'notes': notes,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt?.toIso8601String(),
+      };
+
+  factory Waypoint.fromJson(Map<String, dynamic> json) => Waypoint(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        bearing: (json['bearing'] as num).toDouble(),
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        altitude: (json['altitude'] as num).toDouble(),
+        notes: json['notes'] as String? ?? '',
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: json['updatedAt'] != null
+            ? DateTime.parse(json['updatedAt'] as String)
+            : null,
+      );
 }

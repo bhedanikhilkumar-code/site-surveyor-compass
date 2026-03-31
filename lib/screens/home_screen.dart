@@ -5,8 +5,11 @@ import 'package:geolocator/geolocator.dart';
 import '../providers/compass_provider.dart';
 import '../services/gps_service.dart';
 import '../widgets/compass_dial.dart';
+import '../utils/geo_utils.dart';
 import 'waypoint_manager_screen.dart';
 import 'level_screen.dart';
+import 'map_screen.dart';
+import 'tools_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -232,8 +235,32 @@ class _HomeScreenState extends State<HomeScreen> {
                           isTrue ? Colors.blue : Colors.red,
                         ),
                       ),
-                      _buildNavDataColumn(Icons.wb_sunny, '06:30', 'sunrise', Colors.orange),
-                      _buildNavDataColumn(Icons.brightness_2, '18:45', 'sunset', Colors.purple),
+                      Consumer<GpsService>(
+                        builder: (context, gps, _) {
+                          if (gps.latitude != null && gps.longitude != null) {
+                            return _buildNavDataColumn(
+                              Icons.wb_sunny,
+                              GeoUtils.calculateSunrise(gps.latitude!, gps.longitude!, DateTime.now()),
+                              'sunrise',
+                              Colors.orange,
+                            );
+                          }
+                          return _buildNavDataColumn(Icons.wb_sunny, '--:--', 'sunrise', Colors.orange);
+                        },
+                      ),
+                      Consumer<GpsService>(
+                        builder: (context, gps, _) {
+                          if (gps.latitude != null && gps.longitude != null) {
+                            return _buildNavDataColumn(
+                              Icons.brightness_2,
+                              GeoUtils.calculateSunset(gps.latitude!, gps.longitude!, DateTime.now()),
+                              'sunset',
+                              Colors.purple,
+                            );
+                          }
+                          return _buildNavDataColumn(Icons.brightness_2, '--:--', 'sunset', Colors.purple);
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -488,9 +515,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Map',
             isActive: false,
             onPressed: () {
-              // Placeholder for map screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Map feature coming soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MapScreen()),
               );
             },
           ),
@@ -499,7 +526,10 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Tools',
             isActive: false,
             onPressed: () {
-              _showSettingsBottomSheet(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ToolsScreen()),
+              );
             },
           ),
         ],
