@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
 import 'providers/compass_provider.dart';
+import 'providers/theme_provider.dart';
 import 'models/waypoint_model.dart';
 import 'models/track_model.dart';
 import 'models/project_model.dart';
@@ -46,10 +47,12 @@ void main() async {
 
   // Initialize compass provider
   final compassProvider = CompassProvider();
+  final themeProvider = ThemeProvider();
 
   runApp(SiteSurveyorCompassApp(
     apiWaypointService: apiWaypointService,
     compassProvider: compassProvider,
+    themeProvider: themeProvider,
   ));
 }
 
@@ -80,11 +83,13 @@ Future<void> _requestPermissions() async {
 class SiteSurveyorCompassApp extends StatelessWidget {
   final ApiWaypointService apiWaypointService;
   final CompassProvider compassProvider;
+  final ThemeProvider themeProvider;
 
   const SiteSurveyorCompassApp({
     Key? key,
     required this.apiWaypointService,
     required this.compassProvider,
+    required this.themeProvider,
   }) : super(key: key);
 
   @override
@@ -92,6 +97,7 @@ class SiteSurveyorCompassApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: compassProvider),
+        ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider(
           create: (context) {
             final gpsService = GpsService();
@@ -101,25 +107,27 @@ class SiteSurveyorCompassApp extends StatelessWidget {
         ),
         Provider<ApiWaypointService>(create: (_) => apiWaypointService),
       ],
-      child: MaterialApp(
-        title: 'Site Surveyor Compass',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blueAccent,
-            brightness: Brightness.light,
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) => MaterialApp(
+          title: 'Site Surveyor Compass',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blueAccent,
+              brightness: Brightness.light,
+            ),
           ),
-        ),
-        darkTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blueAccent,
-            brightness: Brightness.dark,
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blueAccent,
+              brightness: Brightness.dark,
+            ),
           ),
+          themeMode: theme.themeMode,
+          home: const HomeScreen(),
         ),
-        themeMode: ThemeMode.dark,
-        home: const HomeScreen(),
       ),
     );
   }

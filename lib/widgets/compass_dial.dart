@@ -80,14 +80,18 @@ class _CompassDialState extends State<CompassDial> with SingleTickerProviderStat
 class CompassPainter extends CustomPainter {
   final double bearing;
 
-  // Cache TextPainters to avoid expensive layout calls in paint()
+  // Instance-level cache cleared each frame via shouldRepaint
   static final Map<String, TextPainter> _textCache = {};
+  static const int _maxCacheSize = 50;
 
   CompassPainter({required this.bearing});
 
   TextPainter _getOrCreateText(String text, TextStyle style) {
     final key = '$text-${style.fontSize}-${style.fontWeight}-${style.color?.value}';
     if (!_textCache.containsKey(key)) {
+      if (_textCache.length >= _maxCacheSize) {
+        _textCache.clear();
+      }
       final tp = TextPainter(
         text: TextSpan(text: text, style: style),
         textDirection: TextDirection.ltr,

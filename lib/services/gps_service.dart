@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter/foundation.dart';
@@ -12,20 +13,30 @@ class GpsService extends ChangeNotifier {
   StreamSubscription<Position>? _positionStream;
   CompassProvider? _compassProvider;
 
-  // Small smoothing filter for displayed coordinates
+  // IMPROVED: Kalman-like filter for coordinates
   double? _smoothedLat;
   double? _smoothedLng;
-  static const double _locAlpha = 0.6; // smoothing factor (0-1)
+  double? _smoothedAlt;
+  double _latErrorEstimate = 1.0;
+  double _lngErrorEstimate = 1.0;
+  double _altErrorEstimate = 5.0;
+  static const double _processNoise = 0.00001;   // Position process noise
+  static const double _altProcessNoise = 0.1;    // Altitude process noise
 
   Position? get currentPosition => _currentPosition;
   bool get isListening => _isListening;
   String? get locationError => _locationError;
   double? get latitude => _smoothedLat ?? _currentPosition?.latitude;
   double? get longitude => _smoothedLng ?? _currentPosition?.longitude;
-  double? get altitude => _currentPosition?.altitude;
+  double? get altitude => _smoothedAlt ?? _currentPosition?.altitude;
   double? get accuracy => _currentPosition?.accuracy;
   String? get address => _address;
   double? get speed => _currentPosition?.speed;
+
+  // GPS quality assessment
+  int _consecutiveGoodReads = 0;
+  double _lastGoodLat = 0;
+  double _lastGoodLng = 0;
 
   void setCompassProvider(CompassProvider provider) {
     _compassProvider = provider;
@@ -35,34 +46,34 @@ class GpsService extends ChangeNotifier {
   double _lastResolvedLat = 0;
   double _lastResolvedLng = 0;
   int _lastResolvedMs = 0;
-  static const int _addressThrottleMs = 30000; // Resolve at most every 30 seconds
-  static const double _addressMinDistance = 0.001; // ~100m
+  static const int _addressThrottleMs = 30000;
+  static const double _addressMinDistance = 0.001;
 
   Future<void> _resolveAddress(double lat, double lng) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final latDelta = (lat - _lastResolvedLat).abs();
     final lngDelta = (lng - _lastResolvedLng).abs();
-    
-    // Skip if resolved recently and hasn't moved far
+
     if (now - _lastResolvedMs < _addressThrottleMs &&
         latDelta < _addressMinDistance &&
         lngDelta < _addressMinDistance) {
       return;
     }
-    
+
     _lastResolvedLat = lat;
     _lastResolvedLng = lng;
     _lastResolvedMs = now;
-    
+
     try {
       final placemarks = await placemarkFromCoordinates(lat, lng);
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
         _address = [
-          if (place.locality != null) place.locality,
-          if (place.administrativeArea != null) place.administrativeArea,
-          if (place.country != null) place.country,
-        ].where((s) => s?.isNotEmpty ?? false).join(', ');
+          if (place.street != null && place.street!.isNotEmpty) place.street,
+          if (place.locality != null && place.locality!.isNotEmpty) place.locality,
+          if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) place.administrativeArea,
+          if (place.country != null && place.country!.isNotEmpty) place.country,
+        ].join(', ');
       }
     } catch (e) {
       _address = null;
@@ -101,26 +112,37 @@ class GpsService extends ChangeNotifier {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.bestForNavigation,
-        timeLimit: const Duration(seconds: 30),
-      );
-
-      // Reject very inaccurate single-shot results
-      if (position.accuracy > 1000) {
-        final last = await Geolocator.getLastKnownPosition();
-        if (last != null) {
-          _currentPosition = last;
-        } else {
-          _currentPosition = position;
-        }
-      } else {
-        _currentPosition = position;
+      // IMPROVED: Get multiple readings and pick the best one
+      Position? bestPosition;
+      for (int attempt = 0; attempt < 3; attempt++) {
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.bestForNavigation,
+            timeLimit: const Duration(seconds: 15),
+          );
+          if (!position.latitude.isNaN && !position.longitude.isNaN) {
+            if (bestPosition == null || position.accuracy < bestPosition.accuracy) {
+              bestPosition = position;
+            }
+          }
+        } catch (_) {}
+        if (attempt < 2) await Future.delayed(const Duration(seconds: 1));
       }
 
-      // Initialize smoothed coords
-      _smoothedLat = _currentPosition?.latitude;
-      _smoothedLng = _currentPosition?.longitude;
+      if (bestPosition == null) {
+        final last = await Geolocator.getLastKnownPosition();
+        bestPosition = last;
+      }
+
+      if (bestPosition != null) {
+        _currentPosition = bestPosition;
+        _smoothedLat = bestPosition.latitude;
+        _smoothedLng = bestPosition.longitude;
+        _smoothedAlt = bestPosition.altitude;
+        _lastGoodLat = bestPosition.latitude;
+        _lastGoodLng = bestPosition.longitude;
+        _consecutiveGoodReads = 1;
+      }
 
       _locationError = null;
       notifyListeners();
@@ -132,11 +154,10 @@ class GpsService extends ChangeNotifier {
 
   Future<void> startLocationUpdates({
     LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
-    int intervalMs = 1000,
-    int distanceFilterMeters = 5,
+    int intervalMs = 500,     // IMPROVED: was 1000ms - faster updates
+    int distanceFilterMeters = 1, // IMPROVED: was 5m - more granular
   }) async {
     try {
-      // Cancel any existing stream to avoid duplicates
       await _positionStream?.cancel();
 
       final hasPermission = await requestLocationPermissions();
@@ -157,19 +178,72 @@ class GpsService extends ChangeNotifier {
 
       _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings).listen(
         (Position position) {
-          // Ignore implausible readings
+          // IMPROVED: Better validation
           if (position.latitude.isNaN || position.longitude.isNaN) return;
-          if (position.accuracy > 5000) return;
+          if (position.latitude.abs() > 90 || position.longitude.abs() > 180) return;
+          if (position.accuracy > 200) return; // IMPROVED: was 5000 - reject bad readings
+
+          // IMPROVED: Detect GPS jumps (sudden position changes > 100m when stationary)
+          if (_smoothedLat != null && _smoothedLng != null && _currentPosition != null) {
+            final distMoved = _haversineDistance(
+              _smoothedLat!, _smoothedLng!,
+              position.latitude, position.longitude,
+            );
+            final timeDelta = _currentPosition != null
+                ? position.timestamp.difference(_currentPosition!.timestamp).inMilliseconds / 1000.0
+                : 1.0;
+            if (timeDelta > 0) {
+              final speedMs = distMoved / timeDelta;
+              // If claimed speed is impossible for a person (>50 m/s = 180 km/h), reject
+              if (speedMs > 50 && _currentPosition!.accuracy < 20) return;
+            }
+          }
 
           _currentPosition = position;
 
-          // Smooth displayed coordinates to reduce jitter
-          if (_smoothedLat == null || _smoothedLng == null) {
+          // IMPROVED: Kalman-like filter for latitude
+          if (_smoothedLat == null) {
             _smoothedLat = position.latitude;
-            _smoothedLng = position.longitude;
+            _latErrorEstimate = position.accuracy;
           } else {
-            _smoothedLat = (_smoothedLat! * (1 - _locAlpha)) + (position.latitude * _locAlpha);
-            _smoothedLng = (_smoothedLng! * (1 - _locAlpha)) + (position.longitude * _locAlpha);
+            final measurementNoise = position.accuracy * position.accuracy;
+            _latErrorEstimate += _processNoise;
+            final kalmanGain = _latErrorEstimate / (_latErrorEstimate + measurementNoise);
+            _smoothedLat = _smoothedLat! + kalmanGain * (position.latitude - _smoothedLat!);
+            _latErrorEstimate *= (1 - kalmanGain);
+          }
+
+          // IMPROVED: Kalman-like filter for longitude
+          if (_smoothedLng == null) {
+            _smoothedLng = position.longitude;
+            _lngErrorEstimate = position.accuracy;
+          } else {
+            final measurementNoise = position.accuracy * position.accuracy;
+            _lngErrorEstimate += _processNoise;
+            final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoise);
+            _smoothedLng = _smoothedLng! + kalmanGain * (position.longitude - _smoothedLng!);
+            _lngErrorEstimate *= (1 - kalmanGain);
+          }
+
+          // IMPROVED: Altitude smoothing
+          if (!position.altitude.isNaN) {
+            if (_smoothedAlt == null) {
+              _smoothedAlt = position.altitude;
+              _altErrorEstimate = position.accuracy * 1.5;
+            } else {
+              final altNoise = position.accuracy * position.accuracy * 2.25;
+              _altErrorEstimate += _altProcessNoise;
+              final kalmanGain = _altErrorEstimate / (_altErrorEstimate + altNoise);
+              _smoothedAlt = _smoothedAlt! + kalmanGain * (position.altitude - _smoothedAlt!);
+              _altErrorEstimate *= (1 - kalmanGain);
+            }
+          }
+
+          // Track consecutive good readings
+          if (position.accuracy < 10) {
+            _consecutiveGoodReads++;
+            _lastGoodLat = position.latitude;
+            _lastGoodLng = position.longitude;
           }
 
           _locationError = null;
@@ -180,18 +254,18 @@ class GpsService extends ChangeNotifier {
             _compassProvider!.updateGpsData(
               speed: speedKmh,
               accuracy: position.accuracy,
-              hasLock: position.accuracy < 50,
+              hasLock: position.accuracy < 20, // IMPROVED: was 50 - tighter lock
             );
             if (!position.altitude.isNaN) {
               _compassProvider!.updateLocation(
-                position.latitude,
-                position.longitude,
-                position.altitude,
+                _smoothedLat ?? position.latitude,
+                _smoothedLng ?? position.longitude,
+                _smoothedAlt ?? position.altitude,
               );
             }
           }
 
-          // Resolve address (don't await to avoid blocking)
+          // Resolve address
           _resolveAddress(position.latitude, position.longitude);
 
           notifyListeners();
@@ -207,6 +281,16 @@ class GpsService extends ChangeNotifier {
       _isListening = false;
       notifyListeners();
     }
+  }
+
+  double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371000.0;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
+        sin(dLon / 2) * sin(dLon / 2);
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
   Future<void> stopLocationUpdates() async {
@@ -229,14 +313,17 @@ class GpsService extends ChangeNotifier {
   }
 
   String getAltitudeString() {
-    if (_currentPosition == null) return 'N/A';
-    return '${_currentPosition!.altitude.toStringAsFixed(1)} m';
+    final alt = _smoothedAlt ?? _currentPosition?.altitude;
+    if (alt == null) return 'N/A';
+    return '${alt.toStringAsFixed(1)} m';
   }
 
   String getAccuracyString() {
     if (_currentPosition == null) return 'N/A';
     return '±${_currentPosition!.accuracy.toStringAsFixed(1)} m';
   }
+
+  int get goodReadCount => _consecutiveGoodReads;
 
   @override
   void dispose() {

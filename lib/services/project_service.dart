@@ -4,7 +4,10 @@ import '../models/project_model.dart';
 
 class ProjectService {
   static const String projectBoxName = 'projects';
+  static const String _metaBoxName = 'project_meta';
+  static const String _activeProjectKey = 'active_project_id';
   late Box<SiteProject> _projectBox;
+  late Box _metaBox;
   String _activeProjectId = 'default';
 
   String get activeProjectId => _activeProjectId;
@@ -18,6 +21,12 @@ class ProjectService {
       _projectBox = Hive.box<SiteProject>(projectBoxName);
     }
 
+    if (!Hive.isBoxOpen(_metaBoxName)) {
+      _metaBox = await Hive.openBox(_metaBoxName);
+    } else {
+      _metaBox = Hive.box(_metaBoxName);
+    }
+
     if (_projectBox.isEmpty) {
       await createProject(
         name: 'Default Project',
@@ -26,11 +35,13 @@ class ProjectService {
       );
     }
 
-    final defaultProject = _projectBox.values.firstWhere(
-      (p) => p.id == 'default',
-      orElse: () => _projectBox.values.first,
-    );
-    _activeProjectId = defaultProject.id;
+    // Restore persisted active project ID
+    final persistedId = _metaBox.get(_activeProjectKey) as String?;
+    if (persistedId != null && _projectBox.containsKey(persistedId)) {
+      _activeProjectId = persistedId;
+    } else {
+      _activeProjectId = _projectBox.values.first.id;
+    }
   }
 
   Future<SiteProject> createProject({
@@ -55,6 +66,7 @@ class ProjectService {
 
   Future<void> setActiveProject(String projectId) async {
     _activeProjectId = projectId;
+    await _metaBox.put(_activeProjectKey, projectId);
   }
 
   Future<SiteProject?> getActiveProject() async {
@@ -83,10 +95,11 @@ class ProjectService {
   }
 
   Future<void> deleteProject(String id) async {
-    if (id == 'default') return;
+    if (_projectBox.length <= 1) return; // Prevent deleting the last project
     await _projectBox.delete(id);
     if (_activeProjectId == id) {
-      _activeProjectId = _projectBox.isNotEmpty ? _projectBox.values.first.id : 'default';
+      _activeProjectId = _projectBox.values.first.id;
+      await _metaBox.put(_activeProjectKey, _activeProjectId);
     }
   }
 
@@ -96,5 +109,6 @@ class ProjectService {
 
   Future<void> close() async {
     await _projectBox.close();
+    await _metaBox.close();
   }
 }

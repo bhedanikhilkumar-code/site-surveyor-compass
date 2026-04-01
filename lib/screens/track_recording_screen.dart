@@ -27,11 +27,21 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
   DateTime? _startTime;
   final List<TrackPoint> _recordedPoints = [];
   List<Track> _savedTracks = [];
+  VoidCallback? _gpsListener;
 
   @override
   void initState() {
     super.initState();
     _initTrackService();
+
+    // Listen to GPS changes outside of build() to avoid duplicate points
+    final gpsService = context.read<GpsService>();
+    _gpsListener = () {
+      if (_isRecording && gpsService.latitude != null && gpsService.longitude != null) {
+        _addPoint(gpsService);
+      }
+    };
+    gpsService.addListener(_gpsListener!);
   }
 
   Future<void> _initTrackService() async {
@@ -99,6 +109,9 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    if (_gpsListener != null) {
+      context.read<GpsService>().removeListener(_gpsListener!);
+    }
     super.dispose();
   }
 
@@ -120,10 +133,6 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
           final lat = gps.latitude;
           final lng = gps.longitude;
           final hasLocation = lat != null && lng != null;
-
-          if (_isRecording && hasLocation) {
-            _addPoint(gps);
-          }
 
           return Column(
             children: [

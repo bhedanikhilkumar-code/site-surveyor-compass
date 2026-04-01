@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../providers/compass_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/gps_service.dart';
 import '../widgets/compass_dial.dart';
 import '../utils/geo_utils.dart';
@@ -16,6 +17,19 @@ import 'ar_compass_screen.dart';
 import 'project_manager_screen.dart';
 import 'import_export_screen.dart';
 import 'settings_screen.dart';
+import 'camera_gps_screen.dart';
+import 'slope_calculator_screen.dart';
+import 'distance_measure_screen.dart';
+import 'qr_share_screen.dart';
+import 'voice_notes_screen.dart';
+import 'height_measure_screen.dart';
+import 'terrain_viewer_screen.dart';
+import 'pdf_report_screen.dart';
+import 'coordinate_converter_screen.dart';
+import 'bearing_line_screen.dart';
+import 'gps_strength_screen.dart';
+import 'saved_locations_screen.dart';
+import 'cloud_backup_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -366,6 +380,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.aspect_ratio,
+                            label: 'Level',
+                            color: Colors.purple,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LevelScreen()),
+                              );
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -400,13 +428,33 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: provider.hasGpsLock ? Colors.green : Colors.red,
                         ),
                       ),
+                      if (provider.magneticDisturbance) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.warning, color: Colors.orange, size: 16),
+                        const Text(' Metal', style: TextStyle(fontSize: 10, color: Colors.orange)),
+                      ],
                     ],
                   ),
-                  if (provider.accuracy > 0)
-                    Text(
-                      '${provider.accuracy.toStringAsFixed(0)}m',
-                      style: const TextStyle(fontSize: 12, color: Colors.white70),
-                    ),
+                  Row(
+                    children: [
+                      if (provider.accuracy > 0)
+                        Text(
+                          '±${provider.accuracy.toStringAsFixed(0)}m',
+                          style: const TextStyle(fontSize: 12, color: Colors.white70),
+                        ),
+                      if (provider.calibrationProgress < 100) ...[
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 14, height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            value: provider.calibrationProgress / 100,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -684,9 +732,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey[900],
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        maxChildSize: 0.8,
-        minChildSize: 0.3,
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
         expand: false,
         builder: (context, scrollController) => SingleChildScrollView(
           controller: scrollController,
@@ -704,21 +752,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text('More Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                const Text('All Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 16),
-                _menuTile(Icons.aspect_ratio, 'Bubble Level', 'Check surface levelness', Colors.cyan, () {
+                _menuTile(Icons.camera_alt, 'Camera GPS Tagging', 'Photo with GPS coordinates', Colors.cyan, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraGpsScreen()));
+                }),
+                _menuTile(Icons.trending_up, 'Slope Calculator', 'Calculate slope between two points', Colors.green, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SlopeCalculatorScreen()));
+                }),
+                _menuTile(Icons.straighten, 'Distance Measure', 'Measure distance by marking points', Colors.blue, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DistanceMeasureScreen()));
+                }),
+                _menuTile(Icons.qr_code, 'QR Code Share', 'Share waypoints via QR code', Colors.purple, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QrShareScreen()));
+                }),
+                _menuTile(Icons.mic, 'Voice Notes', 'Record voice notes at site', Colors.red, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VoiceNotesScreen()));
+                }),
+                _menuTile(Icons.aspect_ratio, 'Bubble Level', 'Check surface levelness', Colors.teal, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const LevelScreen()));
                 }),
-                _menuTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.red, () {
+                _menuTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.redAccent, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const TrackRecordingScreen()));
                 }),
-                _menuTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.green, () {
+                _menuTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.greenAccent, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AreaMeasurementScreen()));
                 }),
-                _menuTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.purple, () {
+                _menuTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.deepPurple, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ArCompassScreen()));
                 }),
@@ -729,6 +797,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 _menuTile(Icons.import_export, 'Import/Export', 'KML, GPX, CSV, JSON', Colors.orange, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ImportExportScreen()));
+                }),
+                _menuTile(Icons.brightness_6, 'Night Mode', 'Toggle dark/light theme', Colors.amber, () {
+                  context.read<ThemeProvider>().toggleTheme();
+                  Navigator.pop(context);
+                }),
+                _menuTile(Icons.height, 'Height Measure', 'Measure object height via angle', Colors.lightGreen, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const HeightMeasureScreen()));
+                }),
+                _menuTile(Icons.terrain, '3D Terrain Viewer', 'View waypoints in 3D', Colors.brown, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TerrainViewerScreen()));
+                }),
+                _menuTile(Icons.picture_as_pdf, 'PDF Report', 'Generate survey report', Colors.redAccent, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PdfReportScreen()));
+                }),
+                _menuTile(Icons.swap_horiz, 'Coordinate Converter', 'DD, DMS, UTM formats', Colors.indigo, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CoordinateConverterScreen()));
+                }),
+                _menuTile(Icons.explore, 'Bearing Line', 'Draw boundary lines on map', Colors.orangeAccent, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BearingLineScreen()));
+                }),
+                _menuTile(Icons.signal_cellular_alt, 'GPS Strength', 'Signal quality & tips', Colors.lime, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const GpsStrengthScreen()));
+                }),
+                _menuTile(Icons.bookmark, 'Saved Locations', 'Bookmarked places', Colors.pink, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedLocationsScreen()));
+                }),
+                _menuTile(Icons.cloud_upload, 'Cloud Backup', 'Auto backup to Firebase', Colors.cyanAccent, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CloudBackupScreen()));
                 }),
                 _menuTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
                   Navigator.pop(context);
@@ -768,4 +872,17 @@ class _NavData {
     required this.hasGpsLock,
     required this.declination,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _NavData &&
+          runtimeType == other.runtimeType &&
+          speed == other.speed &&
+          accuracy == other.accuracy &&
+          hasGpsLock == other.hasGpsLock &&
+          declination == other.declination;
+
+  @override
+  int get hashCode => Object.hash(speed, accuracy, hasGpsLock, declination);
 }

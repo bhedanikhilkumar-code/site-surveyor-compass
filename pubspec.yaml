@@ -3,7 +3,7 @@ description: GeoCompass Pro - Precision digital compass for construction site su
 
 publish_to: 'none'
 
-version: 2.0.0+3
+version: 4.0.0+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -30,6 +30,12 @@ dependencies:
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
   share_plus: ^7.2.2
+  image_picker: ^1.0.7
+  qr_flutter: ^4.1.0
+  record: ^5.0.4
+  audioplayers: ^5.2.1
+  pdf: ^3.10.7
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:

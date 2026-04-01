@@ -96,20 +96,19 @@ class GeoUtils {
     // Calculate solar noon in minutes from midnight UTC
     final solarNoonMinutes = 720 - 4 * longitude - equationOfTime;
 
-    double sunriseMinutes;
-    double sunsetMinutes;
+    double targetMinutes;
 
     if (isSunrise) {
-      sunriseMinutes = solarNoonMinutes - hourAngleMinutes;
-      final hours = (sunriseMinutes / 60).floor();
-      final minutes = (sunriseMinutes % 60).round();
-      return DateTime(date.year, date.month, date.day, hours, minutes);
+      targetMinutes = solarNoonMinutes - hourAngleMinutes;
     } else {
-      sunsetMinutes = solarNoonMinutes + hourAngleMinutes;
-      final hours = (sunsetMinutes / 60).floor();
-      final minutes = (sunsetMinutes % 60).round();
-      return DateTime(date.year, date.month, date.day, hours, minutes);
+      targetMinutes = solarNoonMinutes + hourAngleMinutes;
     }
+
+    // Convert UTC minutes to local DateTime
+    final hours = (targetMinutes / 60).floor();
+    final minutes = (targetMinutes % 60).round();
+    final utcDateTime = DateTime.utc(date.year, date.month, date.day, hours, minutes);
+    return utcDateTime.toLocal();
   }
 
   static int _dayOfYear(DateTime date) {

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -125,7 +126,7 @@ class _MapScreenState extends State<MapScreen> {
                   polylines: [
                     Polyline(
                       points: track.points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
-                      color: Color(int.parse(track.color.replaceFirst('#', '0xFF'))).withOpacity(0.7),
+                      color: _parseColor(track.color).withOpacity(0.7),
                       strokeWidth: 3.0,
                     ),
                   ],
@@ -399,13 +400,23 @@ class _MapScreenState extends State<MapScreen> {
     final lngDiff = maxLng - minLng;
     final maxDiff = latDiff > lngDiff ? latDiff : lngDiff;
 
-    double zoom = 10;
+    // Calculate zoom level based on coordinate span
+    // Each zoom level doubles the visible area; at zoom 0 the world is ~360° wide
+    double zoom;
     if (maxDiff > 0) {
-      zoom = 8 - (maxDiff.abs().toString().length - 2);
-      if (zoom < 2) zoom = 2;
-      if (zoom > 18) zoom = 18;
+      zoom = (log(360 / maxDiff) / ln2).clamp(2.0, 18.0);
+    } else {
+      zoom = 16;
     }
 
     _mapController.move(center, zoom);
+  }
+
+  Color _parseColor(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', '0xFF')));
+    } catch (_) {
+      return Colors.cyan;
+    }
   }
 }

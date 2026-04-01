@@ -58,7 +58,7 @@ class _NavigateWaypointScreenState extends State<NavigateWaypointScreen> {
             lat, lng,
             widget.waypoint.latitude, widget.waypoint.longitude,
           );
-          final compassHeading = compass.trueBearing;
+          final compassHeading = compass.trueBearing.isNaN ? 0.0 : compass.trueBearing;
           final relativeBearing = (bearing - compassHeading + 360) % 360;
           final elevationDiff = widget.waypoint.altitude - (gpsService.altitude ?? 0);
 

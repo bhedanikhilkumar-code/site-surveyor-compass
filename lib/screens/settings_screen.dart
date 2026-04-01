@@ -26,24 +26,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadCounts() async {
-    final waypointService = WaypointService();
-    final trackService = TrackService();
-    final projectService = ProjectService();
-    
-    await waypointService.initialize();
-    await trackService.initialize();
-    await projectService.initialize();
+    try {
+      final waypointService = WaypointService();
+      final trackService = TrackService();
+      final projectService = ProjectService();
 
-    final wpCount = await waypointService.getWaypointCount();
-    final trCount = await trackService.getTrackCount();
-    final pjCount = await projectService.getProjectCount();
+      await waypointService.initialize();
+      await trackService.initialize();
+      await projectService.initialize();
 
-    if (mounted) {
-      setState(() {
-        _waypointCount = wpCount;
-        _trackCount = trCount;
-        _projectCount = pjCount;
-      });
+      final wpCount = await waypointService.getWaypointCount();
+      final trCount = await trackService.getTrackCount();
+      final pjCount = await projectService.getProjectCount();
+
+      if (mounted) {
+        setState(() {
+          _waypointCount = wpCount;
+          _trackCount = trCount;
+          _projectCount = pjCount;
+        });
+      }
+    } catch (e) {
+      // Hive boxes may already be open from other services - that's fine
     }
   }
 
