@@ -18,6 +18,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   late Future<List<Waypoint>> _waypoints;
   final searchController = TextEditingController();
   bool _isSearching = false;
+  String _sortBy = 'date'; // date, name, altitude, bearing
+  bool _sortDescending = true;
 
   @override
   void initState() {
@@ -36,11 +38,28 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
     setState(() {
       final waypointService = context.read<ApiWaypointService>();
       if (_isSearching && searchController.text.isNotEmpty) {
-        _waypoints = waypointService.searchWaypoints(searchController.text);
+        _waypoints = waypointService.searchWaypoints(searchController.text).then((list) => _sortWaypoints(list));
       } else {
-        _waypoints = waypointService.getWaypointsSortedByDate();
+        _waypoints = waypointService.getWaypointsSortedByDate().then((list) => _sortWaypoints(list));
       }
     });
+  }
+
+  List<Waypoint> _sortWaypoints(List<Waypoint> list) {
+    switch (_sortBy) {
+      case 'name':
+        list.sort((a, b) => _sortDescending ? b.name.compareTo(a.name) : a.name.compareTo(b.name));
+        break;
+      case 'altitude':
+        list.sort((a, b) => _sortDescending ? b.altitude.compareTo(a.altitude) : a.altitude.compareTo(b.altitude));
+        break;
+      case 'bearing':
+        list.sort((a, b) => _sortDescending ? b.bearing.compareTo(a.bearing) : a.bearing.compareTo(b.bearing));
+        break;
+      default:
+        list.sort((a, b) => _sortDescending ? b.createdAt.compareTo(a.createdAt) : a.createdAt.compareTo(b.createdAt));
+    }
+    return list;
   }
 
   void _deleteWaypoint(String id) async {
@@ -87,6 +106,26 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
         title: const Text('Waypoint Manager'),
         elevation: 0,
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort),
+            onSelected: (value) {
+              setState(() {
+                if (_sortBy == value) {
+                  _sortDescending = !_sortDescending;
+                } else {
+                  _sortBy = value;
+                  _sortDescending = true;
+                }
+              });
+              _refreshWaypoints();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(value: 'date', child: Text('Sort by Date ${_sortBy == 'date' ? (_sortDescending ? '↓' : '↑') : ''}')),
+              PopupMenuItem(value: 'name', child: Text('Sort by Name ${_sortBy == 'name' ? (_sortDescending ? '↓' : '↑') : ''}')),
+              PopupMenuItem(value: 'altitude', child: Text('Sort by Altitude ${_sortBy == 'altitude' ? (_sortDescending ? '↓' : '↑') : ''}')),
+              PopupMenuItem(value: 'bearing', child: Text('Sort by Bearing ${_sortBy == 'bearing' ? (_sortDescending ? '↓' : '↑') : ''}')),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshWaypoints,

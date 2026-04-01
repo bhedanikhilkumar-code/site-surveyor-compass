@@ -4,7 +4,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../services/gps_service.dart';
 import '../services/api_waypoint_service.dart';
+import '../services/track_service.dart';
 import '../models/waypoint_model.dart';
+import '../models/track_model.dart';
 import '../utils/geo_utils.dart';
 import 'navigate_waypoint_screen.dart';
 
@@ -17,13 +19,17 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  final TrackService _trackService = TrackService();
   bool _followUser = true;
+  bool _showTracks = true;
   List<Waypoint> _waypoints = [];
+  List<Track> _tracks = [];
 
   @override
   void initState() {
     super.initState();
     _loadWaypoints();
+    _loadTracks();
   }
 
   Future<void> _loadWaypoints() async {
@@ -34,6 +40,14 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<void> _loadTracks() async {
+    await _trackService.initialize();
+    final tracks = await _trackService.getAllTracks();
+    if (mounted) {
+      setState(() => _tracks = tracks);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,6 +55,16 @@ class _MapScreenState extends State<MapScreen> {
         title: const Text('Map'),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(
+              _showTracks ? Icons.timeline : Icons.timeline_outlined,
+              color: _showTracks ? Colors.orange : Colors.grey,
+            ),
+            onPressed: () {
+              setState(() => _showTracks = !_showTracks);
+            },
+            tooltip: 'Toggle tracks',
+          ),
           IconButton(
             icon: Icon(
               _followUser ? Icons.gps_fixed : Icons.gps_not_fixed,
@@ -60,7 +84,10 @@ class _MapScreenState extends State<MapScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadWaypoints,
+            onPressed: () {
+              _loadWaypoints();
+              _loadTracks();
+            },
           ),
         ],
       ),
@@ -92,6 +119,17 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.surveyor.compass',
               ),
+              // Track polylines
+              if (_showTracks)
+                ..._tracks.where((t) => t.points.length >= 2).map((track) => PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: track.points.map((p) => LatLng(p.latitude, p.longitude)).toList(),
+                      color: Color(int.parse(track.color.replaceFirst('#', '0xFF'))).withOpacity(0.7),
+                      strokeWidth: 3.0,
+                    ),
+                  ],
+                )),
               // Waypoint markers
               MarkerLayer(
                 markers: [
@@ -159,6 +197,7 @@ class _MapScreenState extends State<MapScreen> {
                         _infoItem(Icons.speed, '${gpsService.speed?.toStringAsFixed(1) ?? '--'}', 'km/h'),
                         _infoItem(Icons.height, '${gpsService.altitude?.toStringAsFixed(0) ?? '--'}', 'm'),
                         _infoItem(Icons.place, '${_waypoints.length}', 'wpts'),
+                        _infoItem(Icons.timeline, '${_tracks.length}', 'tracks'),
                       ],
                     ),
                   ),

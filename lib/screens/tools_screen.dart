@@ -23,10 +23,16 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
   late TabController _tabController;
   List<Waypoint> _waypoints = [];
 
+  // Bearing calculator controllers - created once, disposed properly
+  final TextEditingController _lat1Controller = TextEditingController();
+  final TextEditingController _lon1Controller = TextEditingController();
+  final TextEditingController _lat2Controller = TextEditingController();
+  final TextEditingController _lon2Controller = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadWaypoints();
   }
 
@@ -41,6 +47,10 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _tabController.dispose();
+    _lat1Controller.dispose();
+    _lon1Controller.dispose();
+    _lat2Controller.dispose();
+    _lon2Controller.dispose();
     super.dispose();
   }
 
@@ -52,9 +62,11 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.explore), text: 'Bearing'),
             Tab(icon: Icon(Icons.file_upload), text: 'Export'),
+            Tab(icon: Icon(Icons.file_download), text: 'Import'),
             Tab(icon: Icon(Icons.show_chart), text: 'Altitude'),
             Tab(icon: Icon(Icons.sync_alt), text: 'Compare'),
           ],
@@ -65,6 +77,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
         children: [
           _buildBearingCalculator(),
           _buildExportTab(),
+          _buildImportTab(),
           _buildAltitudeChart(),
           _buildWaypointCompare(),
         ],
@@ -74,10 +87,6 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
 
   // ========== BEARING CALCULATOR TAB ==========
   Widget _buildBearingCalculator() {
-    final lat1Controller = TextEditingController();
-    final lon1Controller = TextEditingController();
-    final lat2Controller = TextEditingController();
-    final lon2Controller = TextEditingController();
     String resultDistance = '';
     String resultBearing = '';
 
@@ -94,7 +103,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: lat1Controller,
+                      controller: _lat1Controller,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
                     ),
@@ -102,7 +111,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
-                      controller: lon1Controller,
+                      controller: _lon1Controller,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
                     ),
@@ -119,8 +128,8 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
                       onPressed: () {
                         final gps = context.read<GpsService>();
                         if (gps.latitude != null && gps.longitude != null) {
-                          lat1Controller.text = gps.latitude!.toStringAsFixed(6);
-                          lon1Controller.text = gps.longitude!.toStringAsFixed(6);
+                          _lat1Controller.text = gps.latitude!.toStringAsFixed(6);
+                          _lon1Controller.text = gps.longitude!.toStringAsFixed(6);
                         }
                       },
                       icon: const Icon(Icons.my_location, size: 16),
@@ -138,7 +147,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: lat2Controller,
+                      controller: _lat2Controller,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
                     ),
@@ -146,7 +155,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
-                      controller: lon2Controller,
+                      controller: _lon2Controller,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                       decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
                     ),
@@ -156,10 +165,10 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: () {
-                  final lat1 = double.tryParse(lat1Controller.text);
-                  final lon1 = double.tryParse(lon1Controller.text);
-                  final lat2 = double.tryParse(lat2Controller.text);
-                  final lon2 = double.tryParse(lon2Controller.text);
+                  final lat1 = double.tryParse(_lat1Controller.text);
+                  final lon1 = double.tryParse(_lon1Controller.text);
+                  final lat2 = double.tryParse(_lat2Controller.text);
+                  final lon2 = double.tryParse(_lon2Controller.text);
 
                   if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -215,6 +224,254 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
           ),
         );
       },
+    );
+  }
+
+  // ========== IMPORT TAB ==========
+  Widget _buildImportTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.cloud_upload, size: 48, color: Colors.green),
+                const SizedBox(height: 8),
+                const Text(
+                  'Import Data',
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Supported: JSON, GPX, KML, CSV',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text('Quick Import Methods', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => _showJsonImportDialog(),
+            icon: const Icon(Icons.code),
+            label: const Text('Paste JSON Data'),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.green),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => _showGpxImportDialog(),
+            icon: const Icon(Icons.explore),
+            label: const Text('Paste GPX Data'),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.orange),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => _showKmlImportDialog(),
+            icon: const Icon(Icons.map),
+            label: const Text('Paste KML Data'),
+            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.blue),
+          ),
+          const SizedBox(height: 24),
+          const Text('CSV Format', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Name,Latitude,Longitude,Altitude\nCorner A,28.6139,77.2090,216\nCorner B,28.6145,77.2095,218',
+              style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.cyan),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJsonImportDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import JSON'),
+        content: TextField(
+          controller: controller,
+          maxLines: 8,
+          decoration: const InputDecoration(
+            hintText: 'Paste JSON waypoint data here...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final data = jsonDecode(controller.text);
+                final service = context.read<ApiWaypointService>();
+                int count = 0;
+                List<dynamic> waypoints;
+                if (data is List) {
+                  waypoints = data;
+                } else if (data is Map && data.containsKey('waypoints')) {
+                  waypoints = data['waypoints'] as List<dynamic>;
+                } else {
+                  waypoints = [data];
+                }
+                for (final w in waypoints) {
+                  final wp = Waypoint.fromJson(w as Map<String, dynamic>);
+                  await service.createWaypoint(
+                    name: wp.name,
+                    bearing: wp.bearing,
+                    latitude: wp.latitude,
+                    longitude: wp.longitude,
+                    altitude: wp.altitude,
+                    notes: wp.notes,
+                  );
+                  count++;
+                }
+                if (mounted) {
+                  Navigator.pop(context);
+                  _loadWaypoints();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Imported $count waypoints')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Import error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGpxImportDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import GPX'),
+        content: TextField(
+          controller: controller,
+          maxLines: 8,
+          decoration: const InputDecoration(
+            hintText: 'Paste GPX data here...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final content = controller.text;
+                final service = context.read<ApiWaypointService>();
+                int count = 0;
+                final wptRegex = RegExp(r'<wpt\s+lat="([^"]+)"\s+lon="([^"]+)">\s*(?:<ele>([^<]*)</ele>)?\s*<name>([^<]*)</name>', dotAll: true);
+                for (final match in wptRegex.allMatches(content)) {
+                  await service.createWaypoint(
+                    name: match.group(4) ?? 'Imported WP',
+                    bearing: 0,
+                    latitude: double.parse(match.group(1)!),
+                    longitude: double.parse(match.group(2)!),
+                    altitude: double.tryParse(match.group(3) ?? '') ?? 0,
+                  );
+                  count++;
+                }
+                if (mounted) {
+                  Navigator.pop(context);
+                  _loadWaypoints();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Imported $count waypoints from GPX')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('GPX import error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showKmlImportDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import KML'),
+        content: TextField(
+          controller: controller,
+          maxLines: 8,
+          decoration: const InputDecoration(
+            hintText: 'Paste KML data here...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final content = controller.text;
+                final service = context.read<ApiWaypointService>();
+                int count = 0;
+                final placemarkRegex = RegExp(r'<Placemark>\s*<name>([^<]*)</name>(?:.*?<Point>\s*<coordinates>([^<]*)</coordinates>)', dotAll: true);
+                for (final match in placemarkRegex.allMatches(content)) {
+                  final coords = match.group(2)!.split(',');
+                  if (coords.length >= 2) {
+                    await service.createWaypoint(
+                      name: match.group(1) ?? 'Imported WP',
+                      bearing: 0,
+                      longitude: double.parse(coords[0]),
+                      latitude: double.parse(coords[1]),
+                      altitude: coords.length >= 3 ? double.tryParse(coords[2]) ?? 0 : 0,
+                    );
+                    count++;
+                  }
+                }
+                if (mounted) {
+                  Navigator.pop(context);
+                  _loadWaypoints();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Imported $count waypoints from KML')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('KML import error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Import'),
+          ),
+        ],
+      ),
     );
   }
 

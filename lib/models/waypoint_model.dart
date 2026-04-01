@@ -82,17 +82,26 @@ class Waypoint {
         'updatedAt': updatedAt?.toIso8601String(),
       };
 
-  factory Waypoint.fromJson(Map<String, dynamic> json) => Waypoint(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        bearing: (json['bearing'] as num).toDouble(),
-        latitude: (json['latitude'] as num).toDouble(),
-        longitude: (json['longitude'] as num).toDouble(),
-        altitude: (json['altitude'] as num).toDouble(),
-        notes: json['notes'] as String? ?? '',
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: json['updatedAt'] != null
-            ? DateTime.parse(json['updatedAt'] as String)
-            : null,
-      );
+  factory Waypoint.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final name = json['name'];
+    if (id == null || name == null) {
+      throw FormatException('Waypoint JSON missing required fields: id or name');
+    }
+    return Waypoint(
+      id: id as String,
+      name: name as String,
+      bearing: (json['bearing'] as num?)?.toDouble() ?? 0.0,
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      altitude: (json['altitude'] as num?)?.toDouble() ?? 0.0,
+      notes: json['notes'] as String? ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
+    );
+  }
 }

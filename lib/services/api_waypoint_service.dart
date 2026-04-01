@@ -1,4 +1,3 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import '../models/waypoint_model.dart';
 import 'waypoint_service.dart';
 import 'firebase_service.dart';

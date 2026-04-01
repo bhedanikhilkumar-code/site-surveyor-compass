@@ -10,6 +10,12 @@ import 'waypoint_manager_screen.dart';
 import 'level_screen.dart';
 import 'map_screen.dart';
 import 'tools_screen.dart';
+import 'track_recording_screen.dart';
+import 'area_measurement_screen.dart';
+import 'ar_compass_screen.dart';
+import 'project_manager_screen.dart';
+import 'import_export_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -42,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updateClock() {
+    if (!mounted) return;
     final now = DateTime.now();
     setState(() {
       _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
@@ -275,8 +282,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text('Elevation', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
                       const SizedBox(width: 8),
                       Text(
-                        gpsService.currentPosition?.altitude != null
-                            ? '${gpsService.currentPosition!.altitude!.toStringAsFixed(1)} m'
+                        gpsService.altitude != null
+                            ? '${gpsService.altitude!.toStringAsFixed(1)} m'
                             : '--',
                         style: const TextStyle(fontSize: 14, color: Colors.white),
                       ),
@@ -334,15 +341,27 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildActionButton(
-                            icon: Icons.speed,
-                            label: 'Speed: ${provider.speed.toStringAsFixed(1)} km/h',
+                            icon: Icons.fiber_manual_record,
+                            label: 'Track',
+                            color: Colors.red,
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Current Speed: ${provider.speed.toStringAsFixed(1)} m/s\n'
-                                      'GPS Accuracy: ${provider.accuracy.toStringAsFixed(1)}m'),
-                                  duration: const Duration(seconds: 3),
-                                ),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const TrackRecordingScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            icon: Icons.crop_free,
+                            label: 'Area',
+                            color: Colors.green,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const AreaMeasurementScreen()),
                               );
                             },
                           ),
@@ -459,6 +478,7 @@ class _HomeScreenState extends State<HomeScreen> {
           unit,
           style: TextStyle(
             fontSize: 9,
+            // ignore: deprecated_member_use
             color: color.withOpacity(0.7),
           ),
         ),
@@ -498,19 +518,6 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {}, // Already on compass
           ),
           _buildBottomNavItem(
-            icon: Icons.aspect_ratio,
-            label: 'Level',
-            isActive: false,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const LevelScreen(),
-                ),
-              );
-            },
-          ),
-          _buildBottomNavItem(
             icon: Icons.map,
             label: 'Map',
             isActive: false,
@@ -522,7 +529,18 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           _buildBottomNavItem(
-            icon: Icons.settings,
+            icon: Icons.navigation,
+            label: 'Waypoints',
+            isActive: false,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const WaypointManagerScreen()),
+              );
+            },
+          ),
+          _buildBottomNavItem(
+            icon: Icons.build,
             label: 'Tools',
             isActive: false,
             onPressed: () {
@@ -531,6 +549,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (context) => const ToolsScreen()),
               );
             },
+          ),
+          _buildBottomNavItem(
+            icon: Icons.settings,
+            label: 'More',
+            isActive: false,
+            onPressed: () => _showSettingsBottomSheet(context),
           ),
         ],
       ),
@@ -613,7 +637,9 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    Color? color,
   }) {
+    final buttonColor = color ?? Colors.cyan;
     return GestureDetector(
       onTap: onPressed,
       child: Container(
@@ -626,22 +652,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           border: Border.all(
-            color: Colors.cyan.withOpacity(0.2),
+            color: buttonColor.withOpacity(0.3),
             width: 1,
           ),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         child: Column(
           children: [
-            Icon(icon, color: Colors.cyan, size: 24),
-            const SizedBox(height: 6),
+            Icon(icon, color: buttonColor, size: 22),
+            const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 color: Colors.white70,
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -653,27 +682,76 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_location),
-              title: const Text('Manage Waypoints'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const WaypointManagerScreen(),
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        maxChildSize: 0.8,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                );
-              },
+                ),
+                const Text('More Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 16),
+                _menuTile(Icons.aspect_ratio, 'Bubble Level', 'Check surface levelness', Colors.cyan, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LevelScreen()));
+                }),
+                _menuTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.red, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TrackRecordingScreen()));
+                }),
+                _menuTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.green, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AreaMeasurementScreen()));
+                }),
+                _menuTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.purple, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ArCompassScreen()));
+                }),
+                _menuTile(Icons.folder, 'Projects', 'Manage site survey projects', Colors.blue, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProjectManagerScreen()));
+                }),
+                _menuTile(Icons.import_export, 'Import/Export', 'KML, GPX, CSV, JSON', Colors.orange, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ImportExportScreen()));
+                }),
+                _menuTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                }),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _menuTile(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: color.withOpacity(0.2),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+      subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }

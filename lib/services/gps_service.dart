@@ -106,14 +106,8 @@ class GpsService extends ChangeNotifier {
         timeLimit: const Duration(seconds: 30),
       );
 
-      if (position == null) {
-        _locationError = 'Unable to get initial position';
-        notifyListeners();
-        return;
-      }
-
       // Reject very inaccurate single-shot results
-      if (position.accuracy != null && position.accuracy > 1000) {
+      if (position.accuracy > 1000) {
         final last = await Geolocator.getLastKnownPosition();
         if (last != null) {
           _currentPosition = last;
@@ -165,7 +159,7 @@ class GpsService extends ChangeNotifier {
         (Position position) {
           // Ignore implausible readings
           if (position.latitude.isNaN || position.longitude.isNaN) return;
-          if (position.accuracy != null && position.accuracy > 5000) return;
+          if (position.accuracy > 5000) return;
 
           _currentPosition = position;
 
@@ -182,17 +176,19 @@ class GpsService extends ChangeNotifier {
 
           // Update compass provider with GPS data
           if (_compassProvider != null) {
+            final speedKmh = position.speed.isNaN ? 0.0 : position.speed * 3.6;
             _compassProvider!.updateGpsData(
-              speed: position.speed,
+              speed: speedKmh,
               accuracy: position.accuracy,
-              hasLock: position.accuracy < 50, // Consider locked if accuracy < 50m
+              hasLock: position.accuracy < 50,
             );
-            // New: update declination automatically
-            _compassProvider!.updateLocation(
-              position.latitude, 
-              position.longitude, 
-              position.altitude
-            );
+            if (!position.altitude.isNaN) {
+              _compassProvider!.updateLocation(
+                position.latitude,
+                position.longitude,
+                position.altitude,
+              );
+            }
           }
 
           // Resolve address (don't await to avoid blocking)

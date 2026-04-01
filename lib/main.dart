@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
 import 'providers/compass_provider.dart';
 import 'models/waypoint_model.dart';
+import 'models/track_model.dart';
+import 'models/project_model.dart';
 import 'services/gps_service.dart';
 import 'services/waypoint_service.dart';
 import 'services/firebase_service.dart';
@@ -27,6 +29,9 @@ void main() async {
   // Initialize Hive for local storage
   await Hive.initFlutter();
   Hive.registerAdapter(WaypointAdapter());
+  Hive.registerAdapter(TrackPointAdapter());
+  Hive.registerAdapter(TrackAdapter());
+  Hive.registerAdapter(SiteProjectAdapter());
   
   // Initialize services
   final waypointService = WaypointService();
