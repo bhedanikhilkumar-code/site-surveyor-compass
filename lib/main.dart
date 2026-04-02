@@ -57,26 +57,27 @@ void main() async {
 }
 
 Future<void> _requestPermissions() async {
-  // Request all required permissions for GPS and sensors
-  final statuses = await [
-    Permission.location,
-    Permission.locationWhenInUse,
-    Permission.locationAlways,
-    Permission.sensors,
-  ].request();
+  // Request permissions with web compatibility
+  try {
+    // Request location and sensor permissions
+    final status = await Permission.locationWhenInUse.request();
+    final sensorStatus = await Permission.sensors.request();
+    
+    // Check if location permissions are granted
+    if (status.isDenied) {
+      print('Location permission denied - GPS will not work');
+    } else {
+      print('Location permission granted - GPS enabled');
+    }
 
-  // Check if location permissions are granted
-  if (statuses[Permission.location]!.isDenied ||
-      statuses[Permission.locationWhenInUse]!.isDenied) {
-    print('Location permission denied - GPS will not work');
-  } else {
-    print('Location permission granted - GPS enabled');
-  }
-
-  if (statuses[Permission.sensors]!.isDenied) {
-    print('Sensor permission denied - Compass may not work');
-  } else {
-    print('Sensor permission granted - Compass enabled');
+    if (sensorStatus.isDenied) {
+      print('Sensor permission denied - Compass may not work');
+    } else {
+      print('Sensor permission granted - Compass enabled');
+    }
+  } catch (e) {
+    print('Permission request error: $e');
+    // Continue anyway - app can work with limited functionality
   }
 }
 
@@ -107,28 +108,16 @@ class SiteSurveyorCompassApp extends StatelessWidget {
         ),
         Provider<ApiWaypointService>(create: (_) => apiWaypointService),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, theme, _) => MaterialApp(
-          title: 'Site Surveyor Compass',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blueAccent,
-              brightness: Brightness.light,
-            ),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blueAccent,
-              brightness: Brightness.dark,
-            ),
-          ),
-          themeMode: theme.themeMode,
-          home: const HomeScreen(),
-        ),
-      ),
+       child: Consumer<ThemeProvider>(
+         builder: (context, themeProvider, _) => MaterialApp(
+           title: 'Site Surveyor Compass',
+           debugShowCheckedModeBanner: false,
+           theme: themeProvider.getThemeData(context: context),
+           darkTheme: themeProvider.getThemeData(context: context),
+           themeMode: themeProvider.themeMode,
+           home: const HomeScreen(),
+         ),
+       ),
     );
   }
 }
