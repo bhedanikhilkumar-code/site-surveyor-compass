@@ -18,11 +18,11 @@ class CompassProvider extends ChangeNotifier {
   bool _magneticDisturbance = false;
   double _magneticFieldStrength = 0.0;
 
-  // IMPROVED: Better smoothing values for responsive yet stable compass
-  static const double _sensorAlpha = 0.25;       // was 0.15 - more responsive
-  static const double _bearingAlpha = 0.3;        // was 0.2 - less lag
-  static const double _gyroAlpha = 0.98;          // Complementary filter weight
-  static const int _minIntervalMs = 30;           // was 50ms - faster updates
+  // OPTIMIZED: Balanced for accuracy and battery/thermal efficiency
+  static const double _sensorAlpha = 0.15;        // Lower for better noise filtering
+  static const double _bearingAlpha = 0.25;       // Slightly more smoothing for stability
+  static const double _gyroAlpha = 0.95;          // Better gyro trust during stable conditions
+  static const int _minIntervalMs = 50;           // Balanced: 20 FPS for good performance without overheating
 
   v.Vector3 _accelFiltered = v.Vector3.zero();
   v.Vector3 _magFiltered = v.Vector3.zero();
@@ -54,6 +54,8 @@ class CompassProvider extends ChangeNotifier {
 
   int _lastUpdateMs = 0;
   bool _disposed = false;
+  bool _paused = false;
+  bool _lowPowerMode = false; // Reduce calculations when battery is low
 
   double get bearing => _bearing;
   double get trueBearing => _trueBearing;
@@ -118,7 +120,7 @@ class CompassProvider extends ChangeNotifier {
         },
       );
 
-      // ADDED: Gyroscope for complementary filter
+      // IMPROVED: Gyroscope for complementary filter with better integration
       _gyroSub = gyroscopeEventStream().listen(
         (GyroscopeEvent event) {
           if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
@@ -126,11 +128,18 @@ class CompassProvider extends ChangeNotifier {
           final now = DateTime.now().microsecondsSinceEpoch / 1000000.0;
           if (_lastGyroTimestamp > 0) {
             final dt = now - _lastGyroTimestamp;
-            if (dt > 0 && dt < 0.5) {
-              // Integrate gyroscope z-axis for heading change
-              _gyroHeading += event.z * dt * (180 / pi);
-              _gyroHeading = ((_gyroHeading % 360) + 360) % 360;
-              _gyroInitialized = true;
+            if (dt > 0.005 && dt < 0.1) { // Valid time step: 5ms to 100ms
+              // FIX: Proper gyroscope integration with axis correction
+              // Z-axis rotation gives heading change (positive = clockwise)
+              // Convert rad/s to degrees and integrate
+              final deltaHeading = event.z * dt * (180 / pi);
+
+              // Apply dead zone for noise reduction
+              if (deltaHeading.abs() > 0.01) { // Ignore very small movements
+                _gyroHeading += deltaHeading;
+                _gyroHeading = ((_gyroHeading % 360) + 360) % 360;
+                _gyroInitialized = true;
+              }
             }
           }
           _lastGyroTimestamp = now;
@@ -177,6 +186,9 @@ class CompassProvider extends ChangeNotifier {
   }
 
   void _updateCalculations() {
+    // Skip updates if paused to save battery
+    if (_paused) return;
+
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastUpdateMs < _minIntervalMs) return;
     _lastUpdateMs = now;
@@ -203,42 +215,75 @@ class CompassProvider extends ChangeNotifier {
   void _calculateHeading() {
     if (_accelFiltered.length == 0 || _magFiltered.length == 0) return;
 
-    // Tilt-compensated magnetic heading
-    v.Vector3 east = _magFiltered.cross(_accelFiltered);
-    if (east.length == 0) return;
-    east.normalize();
+    double magneticHeading;
 
-    v.Vector3 north = _accelFiltered.cross(east);
-    if (north.length == 0) return;
-    north.normalize();
+    if (_lowPowerMode) {
+      // SIMPLE MODE: Basic heading calculation for low power
+      magneticHeading = atan2(_magFiltered.y, _magFiltered.x) * 180 / pi;
+      magneticHeading = (magneticHeading + 360) % 360;
 
-    double magneticHeading = atan2(east.y, north.y) * 180 / pi;
-    magneticHeading = (magneticHeading + 360) % 360;
+      // Simple complementary filter
+      if (_gyroInitialized) {
+        magneticHeading = _gyroAlpha * _gyroHeading + (1 - _gyroAlpha) * magneticHeading;
+        _gyroHeading = magneticHeading;
+      }
 
-    // IMPROVED: Complementary filter - fuse gyro + magnetometer
-    double fusedHeading = magneticHeading;
-    if (_gyroInitialized && !_magneticDisturbance) {
-      // Use gyro when magnetic is stable, magnetometer corrects drift
-      fusedHeading = _gyroAlpha * _gyroHeading + (1 - _gyroAlpha) * magneticHeading;
-      fusedHeading = ((fusedHeading % 360) + 360) % 360;
-      // Sync gyro to fused result to prevent drift
-      _gyroHeading = fusedHeading;
-    } else if (_magneticDisturbance) {
-      // During disturbance, rely more on gyro
-      fusedHeading = 0.95 * _gyroHeading + 0.05 * magneticHeading;
-      fusedHeading = ((fusedHeading % 360) + 360) % 360;
-      _gyroHeading = fusedHeading;
+      _bearing = magneticHeading;
+    } else {
+      // FULL ACCURACY MODE: Advanced tilt-compensated calculation
+      // Normalize accelerometer vector (down direction)
+      v.Vector3 down = _accelFiltered.clone();
+      down.normalize();
+
+      // Normalize magnetometer vector
+      v.Vector3 mag = _magFiltered.clone();
+      mag.normalize();
+
+      // Calculate east vector (cross product of down and magnetic north)
+      v.Vector3 east = down.cross(mag);
+      east.normalize();
+
+      // Calculate north vector (cross product of east and down)
+      v.Vector3 north = east.cross(down);
+      north.normalize();
+
+      // Calculate heading from north vector
+      magneticHeading = atan2(north.y, north.x) * 180 / pi;
+      magneticHeading = (magneticHeading + 360) % 360;
+
+      // FIX: Better complementary filter with adaptive weighting
+      double fusedHeading = magneticHeading;
+      if (_gyroInitialized) {
+        // Adaptive complementary filter based on magnetic field stability
+        double filterWeight = _magneticDisturbance ? 0.9 : _gyroAlpha;
+
+        // Calculate shortest angular difference
+        double headingDiff = ((magneticHeading - _gyroHeading + 540) % 360) - 180;
+        fusedHeading = _gyroHeading + filterWeight * headingDiff;
+        fusedHeading = ((fusedHeading % 360) + 360) % 360;
+
+        // Update gyro reference with gradual correction
+        double gyroCorrection = 0.02 * headingDiff;
+        _gyroHeading += gyroCorrection;
+        _gyroHeading = ((_gyroHeading % 360) + 360) % 360;
+      }
+
+      // FIX: Improved Kalman filter for bearing with better parameters
+      double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
+      _bearingErrorEstimate += _bearingQ;
+      final kalmanGain = _bearingErrorEstimate / (_bearingErrorEstimate + _bearingR);
+      _bearingEstimate += kalmanGain * delta;
+      _bearingEstimate = ((_bearingEstimate % 360) + 360) % 360;
+      _bearingErrorEstimate *= (1 - kalmanGain);
+
+      // FIX: Apply bearing smoothing only when stable
+      if (_magneticDisturbance) {
+        _bearing = fusedHeading;
+      } else {
+        _bearing = _bearing * (1 - _bearingAlpha) + _bearingEstimate * _bearingAlpha;
+      }
     }
 
-    // IMPROVED: Kalman-like filter for smooth, accurate bearing
-    double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
-    _bearingErrorEstimate += _bearingQ;
-    final kalmanGain = _bearingErrorEstimate / (_bearingErrorEstimate + _bearingR);
-    _bearingEstimate += kalmanGain * delta;
-    _bearingEstimate = ((_bearingEstimate % 360) + 360) % 360;
-    _bearingErrorEstimate *= (1 - kalmanGain);
-
-    _bearing = _bearingEstimate;
     _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
   }
 
@@ -278,6 +323,15 @@ class CompassProvider extends ChangeNotifier {
     _speed = speed.isNaN ? 0.0 : speed;
     _accuracy = accuracy.isNaN ? 0.0 : accuracy;
     _hasGpsLock = hasLock;
+  }
+
+  // BATTERY OPTIMIZATION: Pause/resume sensor updates
+  void pauseSensors() {
+    _paused = true;
+  }
+
+  void resumeSensors() {
+    _paused = false;
   }
 
   void resetCalibration() {

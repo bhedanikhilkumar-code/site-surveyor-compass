@@ -38,7 +38,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _showTrueBearing = true;
   String _currentTime = '';
   String _currentDate = '';
@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _updateClock();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
 
@@ -56,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await gpsService.startLocationUpdates(
         accuracy: LocationAccuracy.bestForNavigation,
         intervalMs: 1000,
-        distanceFilterMeters: 5,
+        distanceFilterMeters: 2,
       );
     });
   }
@@ -71,7 +72,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final compassProvider = context.read<CompassProvider>();
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Pause sensors to save battery when app is not visible
+      compassProvider.pauseSensors();
+    } else if (state == AppLifecycleState.resumed) {
+      // Resume sensors when app becomes visible
+      compassProvider.resumeSensors();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clockTimer?.cancel();
     super.dispose();
   }

@@ -13,15 +13,15 @@ class GpsService extends ChangeNotifier {
   StreamSubscription<Position>? _positionStream;
   CompassProvider? _compassProvider;
 
-  // IMPROVED: Kalman-like filter for coordinates
+  // OPTIMIZED: Kalman-like filter for coordinates with better parameters
   double? _smoothedLat;
   double? _smoothedLng;
   double? _smoothedAlt;
-  double _latErrorEstimate = 1.0;
-  double _lngErrorEstimate = 1.0;
-  double _altErrorEstimate = 5.0;
-  static const double _processNoise = 0.00001;   // Position process noise
-  static const double _altProcessNoise = 0.1;    // Altitude process noise
+  double _latErrorEstimate = 2.0;
+  double _lngErrorEstimate = 2.0;
+  double _altErrorEstimate = 10.0;
+  static const double _processNoise = 0.000005;   // Reduced process noise for smoother tracking
+  static const double _altProcessNoise = 0.05;    // Reduced altitude process noise
 
   Position? get currentPosition => _currentPosition;
   bool get isListening => _isListening;
@@ -157,8 +157,8 @@ class GpsService extends ChangeNotifier {
 
   Future<void> startLocationUpdates({
     LocationAccuracy accuracy = LocationAccuracy.bestForNavigation,
-    int intervalMs = 500,     // IMPROVED: was 1000ms - faster updates
-    int distanceFilterMeters = 1, // IMPROVED: was 5m - more granular
+    int intervalMs = 1000,    // BALANCED: 1 second updates for battery efficiency
+    int distanceFilterMeters = 2, // REASONABLE: 2m filter for good responsiveness
   }) async {
     try {
       await _positionStream?.cancel();
@@ -204,17 +204,38 @@ class GpsService extends ChangeNotifier {
 
           _currentPosition = position;
 
-          // IMPROVED: Kalman-like filter for latitude (in degrees)
-          final latDegPerMeter = 1 / 111319.5; // Approximate meters per degree latitude
-          final measurementNoiseLat = pow(position.accuracy * latDegPerMeter, 2);
+          // FIX: Better Kalman filter for latitude with improved parameters
+          final latDegPerMeter = 1 / 111319.5; // Meters per degree latitude
+          final measurementNoiseLat = pow(max(position.accuracy * latDegPerMeter, 0.1), 2); // Minimum noise floor
           if (_smoothedLat == null) {
             _smoothedLat = position.latitude;
             _latErrorEstimate = position.accuracy * latDegPerMeter;
           } else {
             _latErrorEstimate += _processNoise;
             final kalmanGain = _latErrorEstimate / (_latErrorEstimate + measurementNoiseLat);
-            _smoothedLat = _smoothedLat! + kalmanGain * (position.latitude - _smoothedLat!);
+            // Limit correction to prevent jumps
+            final correction = kalmanGain * (position.latitude - _smoothedLat!);
+            if (correction.abs() < 0.001) { // Max 100m correction per update
+              _smoothedLat = _smoothedLat! + correction;
+            }
             _latErrorEstimate *= (1 - kalmanGain);
+          }
+
+          // FIX: Better Kalman filter for longitude with improved parameters
+          final lngDegPerMeterLng = 1 / (111319.5 * cos(position.latitude * pi / 180));
+          final measurementNoiseLngFinal = pow(max(position.accuracy * lngDegPerMeterLng, 0.1), 2); // Minimum noise floor
+          if (_smoothedLng == null) {
+            _smoothedLng = position.longitude;
+            _lngErrorEstimate = position.accuracy * lngDegPerMeterLng;
+          } else {
+            _lngErrorEstimate += _processNoise;
+            final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoiseLngFinal);
+            // Limit correction to prevent jumps
+            final correction = kalmanGain * (position.longitude - _smoothedLng!);
+            if (correction.abs() < 0.001) { // Max 100m correction per update
+              _smoothedLng = _smoothedLng! + correction;
+            }
+            _lngErrorEstimate *= (1 - kalmanGain);
           }
 
           // IMPROVED: Kalman-like filter for longitude (in degrees)

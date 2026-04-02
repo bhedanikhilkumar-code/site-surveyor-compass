@@ -12,6 +12,8 @@ import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
 import '../utils/geo_utils.dart';
 import 'weather_screen.dart';
+import 'cogo_calculations_screen.dart';
+import 'stakeout_screen.dart';
 
 class ToolsScreen extends StatefulWidget {
   const ToolsScreen({Key? key}) : super(key: key);
@@ -33,7 +35,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
     _loadWaypoints();
   }
 
@@ -71,6 +73,8 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
             Tab(icon: Icon(Icons.show_chart), text: 'Altitude'),
             Tab(icon: Icon(Icons.sync_alt), text: 'Compare'),
             Tab(icon: Icon(Icons.cloud), text: 'Weather'),
+            Tab(icon: Icon(Icons.calculate), text: 'COGO'),
+            Tab(icon: Icon(Icons.gps_fixed), text: 'Stakeout'),
           ],
         ),
       ),
@@ -83,6 +87,8 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
           _buildAltitudeChart(),
           _buildWaypointCompare(),
           const WeatherScreen(),
+          const CogoCalculationsScreen(),
+          const StakeoutScreen(),
         ],
       ),
     );
