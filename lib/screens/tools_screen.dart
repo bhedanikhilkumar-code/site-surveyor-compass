@@ -11,6 +11,7 @@ import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
 import '../utils/geo_utils.dart';
+import 'weather_screen.dart';
 
 class ToolsScreen extends StatefulWidget {
   const ToolsScreen({Key? key}) : super(key: key);
@@ -32,7 +33,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadWaypoints();
   }
 
@@ -69,6 +70,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
             Tab(icon: Icon(Icons.file_download), text: 'Import'),
             Tab(icon: Icon(Icons.show_chart), text: 'Altitude'),
             Tab(icon: Icon(Icons.sync_alt), text: 'Compare'),
+            Tab(icon: Icon(Icons.cloud), text: 'Weather'),
           ],
         ),
       ),
@@ -80,6 +82,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
           _buildImportTab(),
           _buildAltitudeChart(),
           _buildWaypointCompare(),
+          const WeatherScreen(),
         ],
       ),
     );

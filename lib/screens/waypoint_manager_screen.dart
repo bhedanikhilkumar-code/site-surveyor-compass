@@ -333,125 +333,12 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   }
 
   void _showAddWaypointDialog() {
-    final nameController = TextEditingController();
-    final bearingController = TextEditingController(text: '0');
-    final latController = TextEditingController();
-    final lngController = TextEditingController();
-    final altController = TextEditingController(text: '0');
-    final notesController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Waypoint'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Waypoint Name',
-                  hintText: 'e.g., North Corner',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: bearingController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Bearing (°)',
-                  suffixText: '°',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: latController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Latitude',
-                  hintText: '28.6139',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: lngController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Longitude',
-                  hintText: '77.2090',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: altController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Altitude (m)',
-                  suffixText: 'm',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Additional information...',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              try {
-                final name = nameController.text.trim();
-                if (name.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a waypoint name')),
-                  );
-                  return;
-                }
-
-                final bearing = double.tryParse(bearingController.text) ?? 0;
-                final lat = double.tryParse(latController.text) ?? 0;
-                final lng = double.tryParse(lngController.text) ?? 0;
-                final alt = double.tryParse(altController.text) ?? 0;
-
-                final waypointService = context.read<ApiWaypointService>();
-                await waypointService.createWaypoint(
-                  name: name,
-                  bearing: bearing,
-                  latitude: lat,
-                  longitude: lng,
-                  altitude: alt,
-                  notes: notesController.text,
-                );
-
-                if (mounted) {
-                  Navigator.pop(context);
-                  _refreshWaypoints();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Waypoint added successfully')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (context) => AddWaypointDialog(
+        onWaypointAdded: () {
+          _refreshWaypoints();
+        },
       ),
     );
   }
@@ -594,6 +481,182 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class AddWaypointDialog extends StatefulWidget {
+  final VoidCallback onWaypointAdded;
+
+  const AddWaypointDialog({Key? key, required this.onWaypointAdded}) : super(key: key);
+
+  @override
+  State<AddWaypointDialog> createState() => _AddWaypointDialogState();
+}
+
+class _AddWaypointDialogState extends State<AddWaypointDialog> {
+  final nameController = TextEditingController();
+  final bearingController = TextEditingController(text: '0');
+  final latController = TextEditingController();
+  final lngController = TextEditingController();
+  final altController = TextEditingController(text: '0');
+  final notesController = TextEditingController();
+
+  // Speech to text
+  // Assume speech_to_text package is added
+  // SpeechToText _speech = SpeechToText();
+  // bool _isListening = false;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    bearingController.dispose();
+    latController.dispose();
+    lngController.dispose();
+    altController.dispose();
+    notesController.dispose();
+    super.dispose();
+  }
+
+  // Future<void> _startListening() async {
+  //   if (!_isListening) {
+  //     bool available = await _speech.initialize();
+  //     if (available) {
+  //       setState(() => _isListening = true);
+  //       _speech.listen(onResult: (result) {
+  //         setState(() {
+  //           notesController.text = result.recognizedWords;
+  //         });
+  //       });
+  //     }
+  //   } else {
+  //     setState(() => _isListening = false);
+  //     _speech.stop();
+  //   }
+  // }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Waypoint'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Waypoint Name',
+                hintText: 'e.g., North Corner',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bearingController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Bearing (°)',
+                suffixText: '°',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: latController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Latitude',
+                hintText: '28.6139',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: lngController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Longitude',
+                hintText: '77.2090',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: altController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Altitude (m)',
+                suffixText: 'm',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Notes',
+                hintText: 'Additional information...',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.mic), // _isListening ? Icons.mic_off : Icons.mic
+                  onPressed: () {
+                    // _startListening();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Voice-to-text not implemented yet')),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () async {
+            try {
+              final name = nameController.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a waypoint name')),
+                );
+                return;
+              }
+
+              final bearing = double.tryParse(bearingController.text) ?? 0;
+              final lat = double.tryParse(latController.text) ?? 0;
+              final lng = double.tryParse(lngController.text) ?? 0;
+              final alt = double.tryParse(altController.text) ?? 0;
+
+              final waypointService = context.read<ApiWaypointService>();
+              await waypointService.createWaypoint(
+                name: name,
+                bearing: bearing,
+                latitude: lat,
+                longitude: lng,
+                altitude: alt,
+                notes: notesController.text,
+              );
+
+              Navigator.pop(context);
+              widget.onWaypointAdded();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Waypoint added successfully')),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error adding waypoint: $e')),
+                );
+              }
+            }
+          },
+          child: const Text('Add'),
+        ),
+      ],
     );
   }
 }

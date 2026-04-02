@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../services/gps_service.dart';
+import '../services/waypoint_service.dart';
+import '../models/waypoint_model.dart';
 import '../utils/geo_utils.dart';
 
 class AreaMeasurementScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _AreaMeasurementScreenState extends State<AreaMeasurementScreen> {
   bool _isMeasuring = false;
   double _area = 0.0;
   double _perimeter = 0.0;
+  List<Waypoint> _waypoints = [];
 
   void _addPoint(GpsService gps) {
     if (gps.latitude == null || gps.longitude == null) return;
@@ -48,10 +51,46 @@ class _AreaMeasurementScreenState extends State<AreaMeasurementScreen> {
   void _clearAll() {
     setState(() {
       _points.clear();
-      _area = 0.0;
-      _perimeter = 0.0;
-      _isMeasuring = false;
+      _calculateArea();
     });
+  }
+
+  Future<void> _loadWaypoints() async {
+    final service = WaypointService();
+    await service.initialize();
+    final waypoints = await service.getAllWaypoints();
+    setState(() => _waypoints = waypoints);
+  }
+
+  void _showWaypointSelector() async {
+    await _loadWaypoints();
+    if (_waypoints.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No waypoints available')),
+        );
+      }
+      return;
+    }
+
+    final selectedWaypoints = await showDialog<List<Waypoint>>(
+      context: context,
+      builder: (context) => WaypointSelectorDialog(waypoints: _waypoints),
+    );
+
+    if (selectedWaypoints != null && selectedWaypoints.length >= 3) {
+      setState(() {
+        _points.clear();
+        _points.addAll(selectedWaypoints.map((w) => LatLng(w.latitude, w.longitude)));
+        _calculateArea();
+      });
+    } else if (selectedWaypoints != null && selectedWaypoints.length < 3) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Select at least 3 waypoints for area calculation')),
+        );
+      }
+    }
   }
 
   void _calculateArea() {
@@ -205,6 +244,14 @@ class _AreaMeasurementScreenState extends State<AreaMeasurementScreen> {
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          FloatingActionButton(
+            heroTag: 'load_waypoints',
+            onPressed: _showWaypointSelector,
+            backgroundColor: Colors.purple,
+            child: const Icon(Icons.bookmark),
+            tooltip: 'Load from Waypoints',
+          ),
+          const SizedBox(height: 8),
           if (_isMeasuring)
             Consumer<GpsService>(
               builder: (context, gps, _) => FloatingActionButton(
@@ -253,6 +300,64 @@ class _AreaMeasurementScreenState extends State<AreaMeasurementScreen> {
         const SizedBox(height: 4),
         Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: const TextStyle(fontSize: 9, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+class WaypointSelectorDialog extends StatefulWidget {
+  final List<Waypoint> waypoints;
+
+  const WaypointSelectorDialog({Key? key, required this.waypoints}) : super(key: key);
+
+  @override
+  State<WaypointSelectorDialog> createState() => _WaypointSelectorDialogState();
+}
+
+class _WaypointSelectorDialogState extends State<WaypointSelectorDialog> {
+  final Set<String> _selectedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Select Waypoints for Area'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 300,
+        child: ListView.builder(
+          itemCount: widget.waypoints.length,
+          itemBuilder: (context, index) {
+            final waypoint = widget.waypoints[index];
+            final isSelected = _selectedIds.contains(waypoint.id);
+            return CheckboxListTile(
+              title: Text(waypoint.name),
+              subtitle: Text('${waypoint.latitude.toStringAsFixed(6)}, ${waypoint.longitude.toStringAsFixed(6)}'),
+              value: isSelected,
+              onChanged: (value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedIds.add(waypoint.id);
+                  } else {
+                    _selectedIds.remove(waypoint.id);
+                  }
+                });
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final selected = widget.waypoints.where((w) => _selectedIds.contains(w.id)).toList();
+            Navigator.of(context).pop(selected);
+          },
+          child: const Text('OK'),
+        ),
       ],
     );
   }

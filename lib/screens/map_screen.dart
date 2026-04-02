@@ -82,6 +82,16 @@ class _MapScreenState extends State<MapScreen> {
           IconButton(
             icon: const Icon(Icons.layers),
             onPressed: _showMapOptions,
+            tooltip: 'Map options',
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Offline map tiles download not implemented yet')),
+              );
+            },
+            tooltip: 'Download offline tiles',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),

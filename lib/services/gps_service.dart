@@ -139,6 +139,9 @@ class GpsService extends ChangeNotifier {
         _smoothedLat = bestPosition.latitude;
         _smoothedLng = bestPosition.longitude;
         _smoothedAlt = bestPosition.altitude;
+        _latErrorEstimate = bestPosition.accuracy / 111319.5;
+        _lngErrorEstimate = bestPosition.accuracy / (111319.5 * cos(bestPosition.latitude * pi / 180));
+        _altErrorEstimate = bestPosition.accuracy * 1.5;
         _lastGoodLat = bestPosition.latitude;
         _lastGoodLng = bestPosition.longitude;
         _consecutiveGoodReads = 1;
@@ -195,32 +198,34 @@ class GpsService extends ChangeNotifier {
             if (timeDelta > 0) {
               final speedMs = distMoved / timeDelta;
               // If claimed speed is impossible for a person (>50 m/s = 180 km/h), reject
-              if (speedMs > 50 && _currentPosition!.accuracy < 20) return;
+              if (speedMs > 50) return;
             }
           }
 
           _currentPosition = position;
 
-          // IMPROVED: Kalman-like filter for latitude
+          // IMPROVED: Kalman-like filter for latitude (in degrees)
+          final latDegPerMeter = 1 / 111319.5; // Approximate meters per degree latitude
+          final measurementNoiseLat = pow(position.accuracy * latDegPerMeter, 2);
           if (_smoothedLat == null) {
             _smoothedLat = position.latitude;
-            _latErrorEstimate = position.accuracy;
+            _latErrorEstimate = position.accuracy * latDegPerMeter;
           } else {
-            final measurementNoise = position.accuracy * position.accuracy;
             _latErrorEstimate += _processNoise;
-            final kalmanGain = _latErrorEstimate / (_latErrorEstimate + measurementNoise);
+            final kalmanGain = _latErrorEstimate / (_latErrorEstimate + measurementNoiseLat);
             _smoothedLat = _smoothedLat! + kalmanGain * (position.latitude - _smoothedLat!);
             _latErrorEstimate *= (1 - kalmanGain);
           }
 
-          // IMPROVED: Kalman-like filter for longitude
+          // IMPROVED: Kalman-like filter for longitude (in degrees)
+          final lngDegPerMeter = 1 / (111319.5 * cos(position.latitude * pi / 180));
+          final measurementNoiseLng = pow(position.accuracy * lngDegPerMeter, 2);
           if (_smoothedLng == null) {
             _smoothedLng = position.longitude;
-            _lngErrorEstimate = position.accuracy;
+            _lngErrorEstimate = position.accuracy * lngDegPerMeter;
           } else {
-            final measurementNoise = position.accuracy * position.accuracy;
             _lngErrorEstimate += _processNoise;
-            final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoise);
+            final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoiseLng);
             _smoothedLng = _smoothedLng! + kalmanGain * (position.longitude - _smoothedLng!);
             _lngErrorEstimate *= (1 - kalmanGain);
           }

@@ -526,8 +526,7 @@ class _HomeScreenState extends State<HomeScreen> {
           unit,
           style: TextStyle(
             fontSize: 9,
-            // ignore: deprecated_member_use
-            color: color.withOpacity(0.7),
+            color: color.withAlpha((0.7 * 255).round()),
           ),
         ),
       ],
@@ -538,8 +537,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final absCoord = coord.abs();
     final degrees = absCoord.floor();
     final minutesFloat = (absCoord - degrees) * 60;
-    final minutes = minutesFloat.floor();
-    final seconds = ((minutesFloat - minutes) * 60).round();
+    int minutes = minutesFloat.floor();
+    final secondsDouble = (minutesFloat - minutes) * 60;
+    int seconds = secondsDouble.floor();
+    if (seconds == 60) {
+      seconds = 0;
+      minutes += 1;
+    }
 
     return '$degrees°${minutes.toString().padLeft(2, '0')}\'${seconds.toString().padLeft(2, '0')}"';
   }
