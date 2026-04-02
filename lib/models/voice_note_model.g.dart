@@ -1,56 +1,50 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'waypoint_model.dart';
+part of 'voice_note_model.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class WaypointAdapter extends TypeAdapter<Waypoint> {
+class VoiceNoteAdapter extends TypeAdapter<VoiceNote> {
   @override
-  final int typeId = 0;
+  final int typeId = 4;
 
   @override
-  Waypoint read(BinaryReader reader) {
+  VoiceNote read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Waypoint(
+    return VoiceNote(
       id: fields[0] as String,
-      name: fields[1] as String,
-      bearing: fields[2] as double,
-      latitude: fields[3] as double,
-      longitude: fields[4] as double,
-      altitude: fields[5] as double,
-      notes: fields[6] as String,
-      createdAt: fields[7] as DateTime,
-      updatedAt: fields[8] as DateTime?,
+      filePath: fields[1] as String,
+      timestamp: fields[2] as DateTime,
+      latitude: fields[3] as double?,
+      longitude: fields[4] as double?,
+      durationMs: fields[5] as int,
+      name: fields[6] as String,
     );
   }
 
   @override
-  void write(BinaryWriter writer, Waypoint obj) {
+  void write(BinaryWriter writer, VoiceNote obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.name)
+      ..write(obj.filePath)
       ..writeByte(2)
-      ..write(obj.bearing)
+      ..write(obj.timestamp)
       ..writeByte(3)
       ..write(obj.latitude)
       ..writeByte(4)
       ..write(obj.longitude)
       ..writeByte(5)
-      ..write(obj.altitude)
+      ..write(obj.durationMs)
       ..writeByte(6)
-      ..write(obj.notes)
-      ..writeByte(7)
-      ..write(obj.createdAt)
-      ..writeByte(8)
-      ..write(obj.updatedAt);
+      ..write(obj.name);
   }
 
   @override
@@ -59,7 +53,7 @@ class WaypointAdapter extends TypeAdapter<Waypoint> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is WaypointAdapter &&
+      other is VoiceNoteAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

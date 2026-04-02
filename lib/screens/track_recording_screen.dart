@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -20,6 +20,7 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
   final TrackService _trackService = TrackService();
   final MapController _mapController = MapController();
   bool _isRecording = false;
+  bool _isPaused = false;
   String _recordingTime = '00:00:00';
   double _totalDistance = 0.0;
   int _pointCount = 0;
@@ -34,10 +35,9 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
     super.initState();
     _initTrackService();
 
-    // Listen to GPS changes outside of build() to avoid duplicate points
     final gpsService = context.read<GpsService>();
     _gpsListener = () {
-      if (_isRecording && gpsService.latitude != null && gpsService.longitude != null) {
+      if (_isRecording && !_isPaused && gpsService.latitude != null && gpsService.longitude != null) {
         _addPoint(gpsService);
       }
     };
@@ -55,6 +55,7 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
     _trackService.startRecording(name: name);
     setState(() {
       _isRecording = true;
+      _isPaused = false;
       _startTime = DateTime.now();
       _totalDistance = 0.0;
       _pointCount = 0;
@@ -73,7 +74,7 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
   }
 
   void _addPoint(GpsService gps) {
-    if (!_isRecording || gps.latitude == null || gps.longitude == null) return;
+    if (!_isRecording || _isPaused || gps.latitude == null || gps.longitude == null) return;
     final point = TrackPoint(
       latitude: gps.latitude!,
       longitude: gps.longitude!,
@@ -90,11 +91,26 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
     });
   }
 
+  void _pauseRecording() {
+    _trackService.pauseRecording();
+    setState(() {
+      _isPaused = true;
+    });
+  }
+
+  void _resumeRecording() {
+    _trackService.resumeRecording();
+    setState(() {
+      _isPaused = false;
+    });
+  }
+
   Future<void> _stopRecording() async {
     _timer?.cancel();
     final track = await _trackService.stopRecording();
     setState(() {
       _isRecording = false;
+      _isPaused = false;
       _recordingTime = '00:00:00';
     });
     if (track != null && mounted) {
@@ -103,6 +119,29 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Track "${track.name}" saved (${GeoUtils.formatDistance(track.totalDistance)})')),
       );
+    }
+  }
+
+  Future<void> _exportTrack(Track track, String format) async {
+    try {
+      String filePath;
+      if (format == 'GPX') {
+        filePath = await _trackService.exportToGpx(track.id);
+      } else {
+        filePath = await _trackService.exportToKml(track.id);
+      }
+      await _trackService.shareFile(filePath);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported "${track.name}" as $format')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -168,7 +207,9 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
                             child: Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: _isRecording ? Colors.red.withOpacity(0.8) : Colors.blue.withOpacity(0.8),
+                                color: _isRecording
+                                    ? (_isPaused ? Colors.orange.withOpacity(0.8) : Colors.red.withOpacity(0.8))
+                                    : Colors.blue.withOpacity(0.8),
                                 border: Border.all(color: Colors.white, width: 2),
                               ),
                               child: const Center(
@@ -186,12 +227,37 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isRecording ? _stopRecording : _startRecording,
-        backgroundColor: _isRecording ? Colors.red : Colors.green,
-        icon: Icon(_isRecording ? Icons.stop : Icons.fiber_manual_record),
-        label: Text(_isRecording ? 'Stop' : 'Start Recording'),
-      ),
+      floatingActionButton: _buildFloatingActionButtons(),
+    );
+  }
+
+  Widget _buildFloatingActionButtons() {
+    if (!_isRecording) {
+      return FloatingActionButton.extended(
+        onPressed: _startRecording,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.fiber_manual_record),
+        label: const Text('Start Recording'),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton.extended(
+          onPressed: _isPaused ? _resumeRecording : _pauseRecording,
+          backgroundColor: Colors.orange,
+          icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
+          label: Text(_isPaused ? 'Resume' : 'Pause'),
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.extended(
+          onPressed: _stopRecording,
+          backgroundColor: Colors.red,
+          icon: const Icon(Icons.stop),
+          label: const Text('Stop'),
+        ),
+      ],
     );
   }
 
@@ -205,7 +271,7 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _panelStat(Icons.timer, _recordingTime, 'Time', _isRecording ? Colors.red : Colors.grey),
+          _panelStat(Icons.timer, _recordingTime, 'Time', _isRecording ? (_isPaused ? Colors.orange : Colors.red) : Colors.grey),
           _panelStat(Icons.straighten, GeoUtils.formatDistance(_totalDistance), 'Distance', Colors.cyan),
           _panelStat(Icons.place, '$_pointCount', 'Points', Colors.orange),
           _panelStat(
@@ -269,14 +335,27 @@ class _TrackRecordingScreenState extends State<TrackRecordingScreen> {
                       '${GeoUtils.formatDistance(track.totalDistance)} | ${track.points.length} pts | ${track.duration.inMinutes}min',
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                      onPressed: () async {
-                        await _trackService.deleteTrack(track.id);
-                        final tracks = await _trackService.getTracksSortedByDate();
-                        if (mounted) setState(() => _savedTracks = tracks);
-                        Navigator.pop(context);
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.share, color: Colors.cyan, size: 20),
+                          onSelected: (value) => _exportTrack(track, value),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'GPX', child: Text('Export GPX')),
+                            const PopupMenuItem(value: 'KML', child: Text('Export KML')),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                          onPressed: () async {
+                            await _trackService.deleteTrack(track.id);
+                            final tracks = await _trackService.getTracksSortedByDate();
+                            if (mounted) setState(() => _savedTracks = tracks);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
                     ),
                     onTap: () {
                       Navigator.pop(context);

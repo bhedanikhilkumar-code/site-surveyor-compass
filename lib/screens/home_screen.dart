@@ -30,6 +30,10 @@ import 'bearing_line_screen.dart';
 import 'gps_strength_screen.dart';
 import 'saved_locations_screen.dart';
 import 'cloud_backup_screen.dart';
+import 'qr_scanner_screen.dart';
+import 'excel_export_screen.dart';
+import 'qr_scanner_screen.dart';
+import 'excel_export_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -808,6 +812,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _menuTile(Icons.qr_code, 'QR Code Share', 'Share waypoints via QR code', Colors.purple, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const QrShareScreen()));
+                }),
+                _menuTile(Icons.qr_code_scanner, 'QR Code Scanner', 'Scan waypoints from QR codes', Colors.deepPurple, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QrScannerScreen()));
+                }),
+                _menuTile(Icons.table_chart, 'Excel Export', 'Export data to Excel spreadsheet', Colors.teal, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ExcelExportScreen()));
                 }),
                 _menuTile(Icons.mic, 'Voice Notes', 'Record voice notes at site', Colors.red, () {
                   Navigator.pop(context);

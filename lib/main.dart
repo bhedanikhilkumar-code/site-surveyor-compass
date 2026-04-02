@@ -9,6 +9,9 @@ import 'providers/theme_provider.dart';
 import 'models/waypoint_model.dart';
 import 'models/track_model.dart';
 import 'models/project_model.dart';
+import 'models/voice_note_model.dart';
+import 'models/tagged_photo.dart';
+import 'models/tagged_photo.dart';
 import 'services/gps_service.dart';
 import 'services/waypoint_service.dart';
 import 'services/firebase_service.dart';
@@ -33,6 +36,8 @@ void main() async {
   Hive.registerAdapter(TrackPointAdapter());
   Hive.registerAdapter(TrackAdapter());
   Hive.registerAdapter(SiteProjectAdapter());
+  Hive.registerAdapter(VoiceNoteAdapter());
+  Hive.registerAdapter(TaggedPhotoAdapter());
   
   // Initialize services
   final waypointService = WaypointService();

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
+import '../services/gps_service.dart';
 import 'navigate_waypoint_screen.dart';
 import 'package:intl/intl.dart';
 
 class WaypointManagerScreen extends StatefulWidget {
-  const WaypointManagerScreen({
-    Key? key,
-  }) : super(key: key);
+  const WaypointManagerScreen({Key? key}) : super(key: key);
 
   @override
   State<WaypointManagerScreen> createState() => _WaypointManagerScreenState();
@@ -18,7 +18,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   late Future<List<Waypoint>> _waypoints;
   final searchController = TextEditingController();
   bool _isSearching = false;
-  String _sortBy = 'date'; // date, name, altitude, bearing
+  String _sortBy = 'date';
   bool _sortDescending = true;
 
   @override
@@ -68,10 +68,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
     _refreshWaypoints();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Waypoint deleted'),
-          duration: Duration(seconds: 2),
-        ),
+        const SnackBar(content: Text('Waypoint deleted'), duration: Duration(seconds: 2)),
       );
     }
   }
@@ -83,10 +80,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
         title: const Text('Delete Waypoint?'),
         content: Text('Delete "$name"? This cannot be undone.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
@@ -126,23 +120,17 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
               PopupMenuItem(value: 'bearing', child: Text('Sort by Bearing ${_sortBy == 'bearing' ? (_sortDescending ? '↓' : '↑') : ''}')),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshWaypoints,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshWaypoints),
         ],
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: searchController,
               onChanged: (value) {
-                setState(() {
-                  _isSearching = value.isNotEmpty;
-                });
+                setState(() => _isSearching = value.isNotEmpty);
                 _refreshWaypoints();
               },
               decoration: InputDecoration(
@@ -153,20 +141,15 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           searchController.clear();
-                          setState(() {
-                            _isSearching = false;
-                          });
+                          setState(() => _isSearching = false);
                           _refreshWaypoints();
                         },
                       )
                     : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
-          // Waypoints List
           Expanded(
             child: FutureBuilder<List<Waypoint>>(
               future: _waypoints,
@@ -174,7 +157,6 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (snapshot.hasError) {
                   return Center(
                     child: Column(
@@ -187,46 +169,32 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                     ),
                   );
                 }
-
                 final waypoints = snapshot.data ?? [];
-
                 if (waypoints.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.location_off,
-                          size: 64,
-                          color: Colors.grey[300],
-                        ),
+                        Icon(Icons.location_off, size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
                         Text(
                           _isSearching ? 'No waypoints found' : 'No waypoints saved yet',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.grey,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
                         ),
                         const SizedBox(height: 8),
                         if (!_isSearching)
                           Text(
                             'Tap the + button to create your first waypoint',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                           ),
                       ],
                     ),
                   );
                 }
-
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   itemCount: waypoints.length,
-                  itemBuilder: (context, index) {
-                    final waypoint = waypoints[index];
-                    return _buildWaypointCard(waypoint);
-                  },
+                  itemBuilder: (context, index) => _buildWaypointCard(waypoints[index]),
                 );
               },
             ),
@@ -243,7 +211,6 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
 
   Widget _buildWaypointCard(Waypoint waypoint) {
     final dateFormat = DateFormat('MMM dd, yyyy - HH:mm');
-    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       child: ListTile(
@@ -251,80 +218,44 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
         leading: Container(
           width: 50,
           height: 50,
-          decoration: BoxDecoration(
-            color: Colors.blue[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: Colors.blue[100], borderRadius: BorderRadius.circular(8)),
           child: Center(
             child: Text(
               '${waypoint.bearing.toInt()}°',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue[900],
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue[900]),
             ),
           ),
         ),
-        title: Text(
-          waypoint.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text(waypoint.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 6),
             Text(
-              '📍 ${waypoint.latitude.toStringAsFixed(5)}, ${waypoint.longitude.toStringAsFixed(5)}',
+              '${waypoint.latitude.toStringAsFixed(5)}, ${waypoint.longitude.toStringAsFixed(5)}',
               style: const TextStyle(fontSize: 12),
             ),
-            Text(
-              '📏 Alt: ${waypoint.altitude.toStringAsFixed(1)}m',
-              style: const TextStyle(fontSize: 12),
-            ),
-            Text(
-              dateFormat.format(waypoint.createdAt),
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[600],
-              ),
-            ),
+            Text('Alt: ${waypoint.altitude.toStringAsFixed(1)}m', style: const TextStyle(fontSize: 12)),
+            Text(dateFormat.format(waypoint.createdAt), style: TextStyle(fontSize: 11, color: Colors.grey[600])),
           ],
         ),
-        trailing: PopupMenuButton(
+        trailing: PopupMenuButton<dynamic>(
           itemBuilder: (context) => <PopupMenuEntry<dynamic>>[
             PopupMenuItem<dynamic>(
-              child: const Row(
-                children: [
-                  Icon(Icons.navigation, size: 18, color: Colors.cyan),
-                  SizedBox(width: 8),
-                  Text('Navigate'),
-                ],
-              ),
+              child: const Row(children: [Icon(Icons.navigation, size: 18, color: Colors.cyan), SizedBox(width: 8), Text('Navigate')]),
               onTap: () {
                 Future.delayed(Duration.zero, () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => NavigateWaypointScreen(waypoint: waypoint),
-                    ),
+                    MaterialPageRoute(builder: (context) => NavigateWaypointScreen(waypoint: waypoint)),
                   );
                 });
               },
             ),
-            PopupMenuItem<dynamic>(
-              child: const Text('Edit'),
-              onTap: () => _showEditWaypointDialog(waypoint),
-            ),
-            PopupMenuItem<dynamic>(
-              child: const Text('View Details'),
-              onTap: () => _showWaypointDetails(waypoint),
-            ),
+            PopupMenuItem<dynamic>(child: const Text('Edit'), onTap: () => _showEditWaypointDialog(waypoint)),
+            PopupMenuItem<dynamic>(child: const Text('View Details'), onTap: () => _showWaypointDetails(waypoint)),
             const PopupMenuDivider(),
-            PopupMenuItem<dynamic>(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () => _showDeleteConfirmation(waypoint.id, waypoint.name),
-            ),
+            PopupMenuItem<dynamic>(child: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () => _showDeleteConfirmation(waypoint.id, waypoint.name)),
           ],
         ),
         onTap: () => _showWaypointDetails(waypoint),
@@ -335,18 +266,13 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
   void _showAddWaypointDialog() {
     showDialog(
       context: context,
-      builder: (context) => AddWaypointDialog(
-        onWaypointAdded: () {
-          _refreshWaypoints();
-        },
-      ),
+      builder: (context) => AddWaypointDialog(onWaypointAdded: () => _refreshWaypoints()),
     );
   }
 
   void _showEditWaypointDialog(Waypoint waypoint) {
     final nameController = TextEditingController(text: waypoint.name);
     final notesController = TextEditingController(text: waypoint.notes);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -355,48 +281,30 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Waypoint Name'),
-              ),
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Waypoint Name')),
               const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Notes'),
-              ),
+              TextField(controller: notesController, maxLines: 3, decoration: const InputDecoration(labelText: 'Notes')),
             ],
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(
             onPressed: () async {
               try {
                 final waypointService = context.read<ApiWaypointService>();
                 await waypointService.updateWaypoint(
                   waypoint.id,
-                  waypoint.copyWith(
-                    name: nameController.text,
-                    notes: notesController.text,
-                  ),
+                  waypoint.copyWith(name: nameController.text, notes: notesController.text),
                 );
-
                 if (mounted) {
                   Navigator.pop(context);
                   _refreshWaypoints();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Waypoint updated')),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waypoint updated')));
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
@@ -409,7 +317,6 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
 
   void _showWaypointDetails(Waypoint waypoint) {
     final dateFormat = DateFormat('MMM dd, yyyy - HH:mm:ss');
-    
     showModalBottomSheet(
       context: context,
       builder: (context) => Padding(
@@ -421,14 +328,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  waypoint.name,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                Text(waypoint.name, style: Theme.of(context).textTheme.headlineSmall),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
               ],
             ),
             const Divider(height: 20),
@@ -437,25 +338,15 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
             _detailRow('Longitude', waypoint.longitude.toStringAsFixed(6)),
             _detailRow('Altitude', '${waypoint.altitude.toStringAsFixed(1)} m'),
             _detailRow('Created', dateFormat.format(waypoint.createdAt)),
-            if (waypoint.updatedAt != null)
-              _detailRow('Last Updated', dateFormat.format(waypoint.updatedAt!)),
+            if (waypoint.updatedAt != null) _detailRow('Last Updated', dateFormat.format(waypoint.updatedAt!)),
             if (waypoint.notes.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
-                'Notes',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              const Text('Notes', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(waypoint.notes),
             ],
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.tonal(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ),
+            SizedBox(width: double.infinity, child: FilledButton.tonal(onPressed: () => Navigator.pop(context), child: const Text('Close'))),
           ],
         ),
       ),
@@ -468,17 +359,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -487,7 +369,6 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
 
 class AddWaypointDialog extends StatefulWidget {
   final VoidCallback onWaypointAdded;
-
   const AddWaypointDialog({Key? key, required this.onWaypointAdded}) : super(key: key);
 
   @override
@@ -502,10 +383,55 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
   final altController = TextEditingController(text: '0');
   final notesController = TextEditingController();
 
-  // Speech to text
-  // Assume speech_to_text package is added
-  // SpeechToText _speech = SpeechToText();
-  // bool _isListening = false;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _speechAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+    _fillCurrentLocation();
+  }
+
+  Future<void> _initSpeech() async {
+    _speechAvailable = await _speech.initialize();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _fillCurrentLocation() async {
+    try {
+      final gpsService = context.read<GpsService>();
+      if (gpsService.latitude != null && gpsService.longitude != null) {
+        setState(() {
+          latController.text = gpsService.latitude!.toStringAsFixed(6);
+          lngController.text = gpsService.longitude!.toStringAsFixed(6);
+          if (gpsService.altitude != null) {
+            altController.text = gpsService.altitude!.toStringAsFixed(1);
+          }
+        });
+      }
+    } catch (e) {
+      // GPS not available
+    }
+  }
+
+  Future<void> _startListening() async {
+    if (!_isListening && _speechAvailable) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (result) {
+          setState(() => notesController.text = result.recognizedWords.toString());
+        },
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: true,
+      );
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
 
   @override
   void dispose() {
@@ -515,25 +441,9 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
     lngController.dispose();
     altController.dispose();
     notesController.dispose();
+    _speech.stop();
     super.dispose();
   }
-
-  // Future<void> _startListening() async {
-  //   if (!_isListening) {
-  //     bool available = await _speech.initialize();
-  //     if (available) {
-  //       setState(() => _isListening = true);
-  //       _speech.listen(onResult: (result) {
-  //         setState(() {
-  //           notesController.text = result.recognizedWords;
-  //         });
-  //       });
-  //     }
-  //   } else {
-  //     setState(() => _isListening = false);
-  //     _speech.stop();
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -545,46 +455,39 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Waypoint Name',
-                hintText: 'e.g., North Corner',
-              ),
+              decoration: const InputDecoration(labelText: 'Waypoint Name', hintText: 'e.g., North Corner'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: bearingController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Bearing (°)',
-                suffixText: '°',
-              ),
+              decoration: const InputDecoration(labelText: 'Bearing (°)', suffixText: '°'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: latController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Latitude',
                 hintText: '28.6139',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.my_location, size: 18),
+                  tooltip: 'Use current GPS location',
+                  onPressed: _fillCurrentLocation,
+                ),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: lngController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Longitude',
-                hintText: '77.2090',
-              ),
+              decoration: const InputDecoration(labelText: 'Longitude', hintText: '77.2090'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: altController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Altitude (m)',
-                suffixText: 'm',
-              ),
+              decoration: const InputDecoration(labelText: 'Altitude (m)', suffixText: 'm'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -594,13 +497,9 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
                 labelText: 'Notes',
                 hintText: 'Additional information...',
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.mic), // _isListening ? Icons.mic_off : Icons.mic
-                  onPressed: () {
-                    // _startListening();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Voice-to-text not implemented yet')),
-                    );
-                  },
+                  icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                  color: _isListening ? Colors.red : null,
+                  onPressed: _speechAvailable ? _startListening : null,
                 ),
               ),
             ),
@@ -608,26 +507,19 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(
           onPressed: () async {
             try {
               final name = nameController.text.trim();
               if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a waypoint name')),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a waypoint name')));
                 return;
               }
-
               final bearing = double.tryParse(bearingController.text) ?? 0;
               final lat = double.tryParse(latController.text) ?? 0;
               final lng = double.tryParse(lngController.text) ?? 0;
               final alt = double.tryParse(altController.text) ?? 0;
-
               final waypointService = context.read<ApiWaypointService>();
               await waypointService.createWaypoint(
                 name: name,
@@ -637,20 +529,14 @@ class _AddWaypointDialogState extends State<AddWaypointDialog> {
                 altitude: alt,
                 notes: notesController.text,
               );
-
               Navigator.pop(context);
               widget.onWaypointAdded();
-
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Waypoint added successfully')),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waypoint added successfully')));
               }
             } catch (e) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error adding waypoint: $e')),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding waypoint: $e')));
               }
             }
           },

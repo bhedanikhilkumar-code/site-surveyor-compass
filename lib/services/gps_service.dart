@@ -238,19 +238,6 @@ class GpsService extends ChangeNotifier {
             _lngErrorEstimate *= (1 - kalmanGain);
           }
 
-          // IMPROVED: Kalman-like filter for longitude (in degrees)
-          final lngDegPerMeter = 1 / (111319.5 * cos(position.latitude * pi / 180));
-          final measurementNoiseLng = pow(position.accuracy * lngDegPerMeter, 2);
-          if (_smoothedLng == null) {
-            _smoothedLng = position.longitude;
-            _lngErrorEstimate = position.accuracy * lngDegPerMeter;
-          } else {
-            _lngErrorEstimate += _processNoise;
-            final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoiseLng);
-            _smoothedLng = _smoothedLng! + kalmanGain * (position.longitude - _smoothedLng!);
-            _lngErrorEstimate *= (1 - kalmanGain);
-          }
-
           // IMPROVED: Altitude smoothing
           if (!position.altitude.isNaN) {
             if (_smoothedAlt == null) {
