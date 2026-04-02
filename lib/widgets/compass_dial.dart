@@ -26,10 +26,13 @@ class _CompassDialState extends State<CompassDial> with SingleTickerProviderStat
     _targetBearing = widget.bearing;
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 80),
+      duration: const Duration(milliseconds: 120), // Slightly slower for more professional feel
     );
     _animation = Tween<double>(begin: _currentBearing, end: _targetBearing).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.linear),
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.decelerate, // More natural deceleration
+      ),
     );
   }
 
@@ -47,9 +50,12 @@ class _CompassDialState extends State<CompassDial> with SingleTickerProviderStat
       if (delta < -180) delta += 360;
       _targetBearing = _currentBearing + delta;
 
-      // Restart animation from current position to new target
+      // Restart animation from current position to new target with spring effect
       _animation = Tween<double>(begin: _currentBearing, end: _targetBearing).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.linear),
+        CurvedAnimation(
+          parent: _controller,
+          curve: Curves.elasticOut, // More professional elastic effect
+        ),
       );
       _controller.forward(from: 0);
     }

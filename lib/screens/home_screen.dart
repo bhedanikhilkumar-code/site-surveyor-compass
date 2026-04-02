@@ -699,50 +699,71 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    Color? color,
-  }) {
-    final buttonColor = color ?? Colors.cyan;
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              Colors.grey[800]!,
-              Colors.grey[850]!,
-            ],
-          ),
-          border: Border.all(
-            color: buttonColor.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        child: Column(
-          children: [
-            Icon(icon, color: buttonColor, size: 22),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.white70,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+   Widget _buildActionButton({
+     required IconData icon,
+     required String label,
+     required VoidCallback onPressed,
+     Color? color,
+   }) {
+     final buttonColor = color ?? Colors.cyan;
+     return Material(
+       color: Colors.transparent,
+       child: InkWell(
+         onTap: onPressed,
+         borderRadius: BorderRadius.circular(12),
+         child: Container(
+           decoration: BoxDecoration(
+             borderRadius: BorderRadius.circular(12),
+             gradient: LinearGradient(
+               colors: [
+                 Colors.grey[850]!,
+                 Colors.grey[900]!,
+               ],
+             ),
+             border: Border.all(
+               color: buttonColor.withOpacity(0.4),
+               width: 1.5,
+             ),
+             boxShadow: [
+               BoxShadow(
+                 color: buttonColor.withOpacity(0.2),
+                 blurRadius: 8,
+                 offset: const Offset(0, 4),
+               ),
+             ],
+           ),
+           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+           child: Column(
+             mainAxisSize: MainAxisSize.min,
+             children: [
+               AnimatedContainer(
+                 duration: const Duration(milliseconds: 200),
+                 transform: Matrix4.identity(),
+                 child: Icon(
+                   icon,
+                   color: buttonColor,
+                   size: 26,
+                 ),
+               ),
+               const SizedBox(height: 6),
+               Text(
+                 label,
+                 style: TextStyle(
+                   fontSize: 11,
+                   color: Colors.white,
+                   fontWeight: FontWeight.w600,
+                   letterSpacing: 0.5,
+                 ),
+                 textAlign: TextAlign.center,
+                 maxLines: 1,
+                 overflow: TextOverflow.ellipsis,
+               ),
+             ],
+           ),
+         ),
+       ),
+     );
+   }
 
   void _showSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
