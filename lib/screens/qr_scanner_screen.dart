@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/waypoint_model.dart';
@@ -121,7 +122,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     try {
       final service = context.read<ApiWaypointService>();
-      await service.createWaypoint(_importedWaypoint!);
+      await service.createWaypoint(
+        name: _importedWaypoint!.name,
+        bearing: _importedWaypoint!.bearing,
+        latitude: _importedWaypoint!.latitude,
+        longitude: _importedWaypoint!.longitude,
+        altitude: _importedWaypoint!.altitude ?? 0,
+        notes: _importedWaypoint!.notes ?? '',
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

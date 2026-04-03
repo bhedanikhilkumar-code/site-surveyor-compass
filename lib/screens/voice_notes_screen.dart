@@ -143,7 +143,7 @@ class _VoiceNotesScreenState extends State<VoiceNotesScreen> {
         if (mounted) {
           setState(() => _playingNoteId = null);
         }
-      }).cancelOnComplete();
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
