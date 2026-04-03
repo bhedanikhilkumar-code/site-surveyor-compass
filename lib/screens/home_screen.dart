@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,8 +33,58 @@ import 'saved_locations_screen.dart';
 import 'cloud_backup_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'excel_export_screen.dart';
-import 'qr_scanner_screen.dart';
-import 'excel_export_screen.dart';
+
+class GlassContainer extends StatelessWidget {
+  final Widget child;
+  final double blur;
+  final double opacity;
+  final BorderRadius? borderRadius;
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
+
+  const GlassContainer({
+    Key? key,
+    required this.child,
+    this.blur = 10.0,
+    this.opacity = 0.1,
+    this.borderRadius,
+    this.padding,
+    this.margin,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin,
+      child: ClipRRect(
+        borderRadius: borderRadius ?? BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Container(
+            padding: padding ?? const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: borderRadius ?? BorderRadius.circular(20),
+              color: Colors.white.withOpacity(opacity),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1.5,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.15),
+                  Colors.white.withOpacity(0.05),
+                ],
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -71,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final now = DateTime.now();
     setState(() {
       _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      _currentDate = '${now.day.toString().padLeft(2, '0')}';
+      _currentDate = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
     });
   }
 
@@ -79,10 +130,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final compassProvider = context.read<CompassProvider>();
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Pause sensors to save battery when app is not visible
       compassProvider.pauseSensors();
     } else if (state == AppLifecycleState.resumed) {
-      // Resume sensors when app becomes visible
       compassProvider.resumeSensors();
     }
   }
@@ -97,425 +146,266 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 60), // Space for indicators
-
-                const SizedBox(height: 24),
-
-                // COMPASS SECTION - Only this part rebuilds on bearing change
-                Selector<CompassProvider, double>(
-                  selector: (_, provider) => _showTrueBearing ? provider.trueBearing : provider.bearing,
-                  builder: (context, bearing, _) {
-                    return Column(
-                      children: [
-                        Center(
-                          child: CompassDial(bearing: bearing),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.read<CompassProvider>().getCardinalDirection(bearing),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white,
-                            fontFamily: 'sans-serif',
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                // GPS COORDINATES - Only rebuilds when GPS changes
-                Consumer<GpsService>(
-                  builder: (context, gpsService, _) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildCoordinateColumn(
-                              'NL',
-                              gpsService.latitude != null
-                                  ? _formatCoordinate(gpsService.latitude!.abs(), isLatitude: true) +
-                                    (gpsService.latitude! >= 0 ? ' N' : ' S')
-                                  : '--',
-                            ),
-                            _buildCoordinateColumn(
-                              'EL',
-                              gpsService.longitude != null
-                                  ? _formatCoordinate(gpsService.longitude!.abs(), isLatitude: false) +
-                                    (gpsService.longitude! >= 0 ? ' E' : ' W')
-                                  : '--',
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Address and GPS Info
-                        if (gpsService.address != null)
-                          Text(
-                            gpsService.address!,
-                            style: const TextStyle(fontSize: 12, color: Colors.white70),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // GPS STATUS & NAV DATA - Rebuilds on compass changes
-                Selector<CompassProvider, _NavData>(
-                  selector: (_, p) => _NavData(
-                    speed: p.speed,
-                    accuracy: p.accuracy,
-                    hasGpsLock: p.hasGpsLock,
-                    declination: p.magneticDeclination,
-                  ),
-                  builder: (context, navData, child) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.gps_fixed,
-                                size: 14,
-                                color: navData.hasGpsLock ? Colors.green : Colors.red,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                navData.accuracy > 0
-                                    ? '${navData.accuracy.toStringAsFixed(0)}m accuracy'
-                                    : 'No GPS lock',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: navData.hasGpsLock ? Colors.green : Colors.red,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildNavDataColumn(
-                                Icons.speed,
-                                '${navData.speed.toStringAsFixed(1)}',
-                                'km/h',
-                                navData.hasGpsLock ? Colors.green : Colors.orange,
-                              ),
-                              _buildNavDataColumn(
-                                Icons.gps_fixed,
-                                navData.accuracy > 0
-                                    ? '${navData.accuracy.toStringAsFixed(0)}'
-                                    : '--',
-                                'meters',
-                                navData.hasGpsLock ? Colors.green : Colors.red,
-                              ),
-                              _buildNavDataColumn(
-                                Icons.compass_calibration,
-                                '${navData.declination.toStringAsFixed(1)}°',
-                                'decl.',
-                                Colors.cyan,
-                              ),
-                              child!, // altitude from GpsService
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  child: Consumer<GpsService>(
-                    builder: (context, gpsService, _) => _buildNavDataColumn(
-                      Icons.height,
-                      gpsService.altitude != null
-                          ? '${gpsService.altitude!.toStringAsFixed(0)}'
-                          : '--',
-                      'meters',
-                      gpsService.altitude != null ? Colors.blue : Colors.grey,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Time & Bearing Info Row
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildNavDataColumn(
-                        Icons.access_time,
-                        _currentTime,
-                        _currentDate,
-                        Colors.amber,
-                      ),
-                      Selector<CompassProvider, bool>(
-                        selector: (_, p) => _showTrueBearing,
-                        builder: (context, isTrue, _) => _buildNavDataColumn(
-                          isTrue ? Icons.explore : Icons.compass_calibration,
-                          isTrue ? 'TRUE' : 'MAG',
-                          'north',
-                          isTrue ? Colors.blue : Colors.red,
-                        ),
-                      ),
-                      Consumer<GpsService>(
-                        builder: (context, gps, _) {
-                          if (gps.latitude != null && gps.longitude != null) {
-                            return _buildNavDataColumn(
-                              Icons.wb_sunny,
-                              GeoUtils.calculateSunrise(gps.latitude!, gps.longitude!, DateTime.now()),
-                              'sunrise',
-                              Colors.orange,
-                            );
-                          }
-                          return _buildNavDataColumn(Icons.wb_sunny, '--:--', 'sunrise', Colors.orange);
-                        },
-                      ),
-                      Consumer<GpsService>(
-                        builder: (context, gps, _) {
-                          if (gps.latitude != null && gps.longitude != null) {
-                            return _buildNavDataColumn(
-                              Icons.brightness_2,
-                              GeoUtils.calculateSunset(gps.latitude!, gps.longitude!, DateTime.now()),
-                              'sunset',
-                              Colors.purple,
-                            );
-                          }
-                          return _buildNavDataColumn(Icons.brightness_2, '--:--', 'sunset', Colors.purple);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Elevation
-                Consumer<GpsService>(
-                  builder: (context, gpsService, _) => Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Elevation', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-                      const SizedBox(width: 8),
-                      Text(
-                        gpsService.altitude != null
-                            ? '${gpsService.altitude!.toStringAsFixed(1)} m'
-                            : '--',
-                        style: const TextStyle(fontSize: 14, color: Colors.white),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.info_outline, size: 12, color: Colors.red),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 48),
-
-                // Bearing Type Toggle
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildBearingToggle(
-                        icon: Icons.compass_calibration,
-                        label: 'Magnetic',
-                        isActive: !_showTrueBearing,
-                        onPressed: () => setState(() => _showTrueBearing = false),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildBearingToggle(
-                        icon: Icons.explore,
-                        label: 'True North',
-                        isActive: _showTrueBearing,
-                        onPressed: () => setState(() => _showTrueBearing = true),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Quick Actions
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Consumer<CompassProvider>(
-                    builder: (context, provider, _) => Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionButton(
-                            icon: Icons.navigation,
-                            label: 'Waypoints',
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const WaypointManagerScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildActionButton(
-                            icon: Icons.fiber_manual_record,
-                            label: 'Track',
-                            color: Colors.red,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const TrackRecordingScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildActionButton(
-                            icon: Icons.crop_free,
-                            label: 'Area',
-                            color: Colors.green,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const AreaMeasurementScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildActionButton(
-                            icon: Icons.aspect_ratio,
-                            label: 'Level',
-                            color: Colors.purple,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const LevelScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 100), // Space for bottom nav
-              ],
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF1a1a2e),
+              const Color(0xFF16213e),
+              const Color(0xFF0f3460),
+            ],
           ),
-
-          // Status indicators at top
-          Positioned(
-            top: 20,
-            left: 20,
-            right: 60,
-            child: Consumer<CompassProvider>(
-              builder: (context, provider, _) => Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        provider.hasGpsLock ? Icons.gps_fixed : Icons.gps_off,
-                        color: provider.hasGpsLock ? Colors.green : Colors.red,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        provider.hasGpsLock ? 'GPS' : 'No GPS',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: provider.hasGpsLock ? Colors.green : Colors.red,
-                        ),
-                      ),
-                      if (provider.magneticDisturbance) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.warning, color: Colors.orange, size: 16),
-                        const Text(' Metal', style: TextStyle(fontSize: 10, color: Colors.orange)),
-                      ],
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      if (provider.accuracy > 0)
-                        Text(
-                          '±${provider.accuracy.toStringAsFixed(0)}m',
-                          style: const TextStyle(fontSize: 12, color: Colors.white70),
-                        ),
-                      if (provider.calibrationProgress < 100) ...[
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 14, height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            value: provider.calibrationProgress / 100,
-                            color: Colors.cyan,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+        ),
+        child: Stack(
+          children: [
+            SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildStatusBar(),
+                    const SizedBox(height: 24),
+                    _buildCompassSection(),
+                    const SizedBox(height: 24),
+                    _buildCoordinatesCard(),
+                    const SizedBox(height: 16),
+                    _buildNavDataCard(),
+                    const SizedBox(height: 16),
+                    _buildTimeSunCard(),
+                    const SizedBox(height: 16),
+                    _buildBearingToggle(),
+                    const SizedBox(height: 24),
+                    _buildQuickActions(),
+                    const SizedBox(height: 100),
+                  ],
+                ),
               ),
             ),
-          ),
-
-          // Settings icon top right
-          Positioned(
-            top: 20,
-            right: 20,
-            child: IconButton(
-              icon: const Icon(Icons.settings_outlined, color: Colors.white, size: 28),
-              onPressed: () => _showSettingsBottomSheet(context),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GlassContainer(
+                blur: 5,
+                opacity: 0.05,
+                borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.all(8),
+                child: IconButton(
+                  icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 24),
+                  onPressed: () => _showSettingsBottomSheet(context),
+                ),
+              ),
             ),
-          ),
-
-          // Bottom Navigation
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildBottomNavigation(),
-          ),
-        ],
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _buildGlassNavigation(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCoordinateColumn(String label, String value) {
+  Widget _buildStatusBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GlassContainer(
+        blur: 8,
+        opacity: 0.08,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Consumer<CompassProvider>(
+          builder: (context, provider, _) => Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: provider.hasGpsLock ? Colors.greenAccent : Colors.redAccent,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (provider.hasGpsLock ? Colors.greenAccent : Colors.redAccent).withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    provider.hasGpsLock ? 'GPS Lock' : 'No GPS',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: provider.hasGpsLock ? Colors.greenAccent : Colors.redAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (provider.magneticDisturbance) ...[
+                    const SizedBox(width: 12),
+                    Icon(Icons.warning_amber, color: Colors.orangeAccent, size: 16),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Magnetic',
+                      style: TextStyle(fontSize: 11, color: Colors.orangeAccent),
+                    ),
+                  ],
+                ],
+              ),
+              Row(
+                children: [
+                  if (provider.accuracy > 0)
+                    Text(
+                      '±${provider.accuracy.toStringAsFixed(0)}m',
+                      style: const TextStyle(fontSize: 12, color: Colors.white60),
+                    ),
+                  if (provider.calibrationProgress < 100) ...[
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: provider.calibrationProgress / 100,
+                        color: Colors.cyanAccent,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompassSection() {
+    return Selector<CompassProvider, double>(
+      selector: (_, provider) => _showTrueBearing ? provider.trueBearing : provider.bearing,
+      builder: (context, bearing, _) {
+        return Column(
+          children: [
+            GlassContainer(
+              blur: 15,
+              opacity: 0.08,
+              borderRadius: BorderRadius.circular(30),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  CompassDial(bearing: bearing),
+                  const SizedBox(height: 16),
+                  Text(
+                    context.read<CompassProvider>().getCardinalDirection(bearing),
+                    style: const TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${bearing.toStringAsFixed(1)}°',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white60,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCoordinatesCard() {
+    return GlassContainer(
+      blur: 10,
+      opacity: 0.08,
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(20),
+      child: Consumer<GpsService>(
+        builder: (context, gpsService, _) => Column(
+          children: [
+            const Text(
+              'COORDINATES',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white38,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildCoordinateItem(
+                  'LATITUDE',
+                  gpsService.latitude != null
+                      ? _formatCoordinate(gpsService.latitude!.abs(), isLatitude: true) +
+                        (gpsService.latitude! >= 0 ? ' N' : ' S')
+                      : '--',
+                ),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.white24,
+                ),
+                _buildCoordinateItem(
+                  'LONGITUDE',
+                  gpsService.longitude != null
+                      ? _formatCoordinate(gpsService.longitude!.abs(), isLatitude: false) +
+                        (gpsService.longitude! >= 0 ? ' E' : ' W')
+                      : '--',
+                ),
+              ],
+            ),
+            if (gpsService.address != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                gpsService.address!,
+                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoordinateItem(String label, String value) {
     return Column(
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[500],
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white38,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             color: Colors.white,
+            fontWeight: FontWeight.w500,
             fontFamily: 'monospace',
           ),
         ),
@@ -523,31 +413,463 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildNavDataColumn(IconData icon, String value, String unit, Color color) {
+  Widget _buildNavDataCard() {
+    return GlassContainer(
+      blur: 10,
+      opacity: 0.08,
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(20),
+      child: Selector<CompassProvider, _NavData>(
+        selector: (_, p) => _NavData(
+          speed: p.speed,
+          accuracy: p.accuracy,
+          hasGpsLock: p.hasGpsLock,
+          declination: p.magneticDeclination,
+        ),
+        builder: (context, navData, _) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNavItem(
+                Icons.speed,
+                '${navData.speed.toStringAsFixed(1)}',
+                'km/h',
+                navData.hasGpsLock ? Colors.greenAccent : Colors.orangeAccent,
+              ),
+              _buildNavItem(
+                Icons.gps_fixed,
+                navData.accuracy > 0 ? '${navData.accuracy.toStringAsFixed(0)}' : '--',
+                'accuracy',
+                navData.hasGpsLock ? Colors.cyanAccent : Colors.redAccent,
+              ),
+              _buildNavItem(
+                Icons.compass_calibration,
+                '${navData.declination.toStringAsFixed(1)}°',
+                'declination',
+                Colors.purpleAccent,
+              ),
+              Consumer<GpsService>(
+                builder: (context, gps, _) => _buildNavItem(
+                  Icons.height,
+                  gps.altitude != null ? '${gps.altitude!.toStringAsFixed(0)}' : '--',
+                  'altitude',
+                  gpsServiceAltitudeColor(gps.altitude),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String value, String unit, Color color) {
     return Column(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: color,
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withOpacity(0.15),
+          ),
+          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 16,
             color: color,
             fontWeight: FontWeight.w600,
           ),
         ),
         Text(
           unit,
-          style: TextStyle(
-            fontSize: 9,
-            color: color.withAlpha((0.7 * 255).round()),
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white38,
           ),
         ),
       ],
+    );
+  }
+
+  Color gpsServiceAltitudeColor(double? altitude) {
+    return altitude != null ? Colors.blueAccent : Colors.grey;
+  }
+
+  Widget _buildTimeSunCard() {
+    return GlassContainer(
+      blur: 10,
+      opacity: 0.08,
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildTimeItem(Icons.access_time, _currentTime, _currentDate, Colors.amberAccent),
+          _buildBearingToggleSmall(),
+          Consumer<GpsService>(
+            builder: (context, gps, _) {
+              if (gps.latitude != null && gps.longitude != null) {
+                return Row(
+                  children: [
+                    _buildSunItem(
+                      Icons.wb_sunny,
+                      GeoUtils.calculateSunrise(gps.latitude!, gps.longitude!, DateTime.now()),
+                      'Sunrise',
+                      Colors.orange,
+                    ),
+                    const SizedBox(width: 24),
+                    _buildSunItem(
+                      Icons.nights_stay,
+                      GeoUtils.calculateSunset(gps.latitude!, gps.longitude!, DateTime.now()),
+                      'Sunset',
+                      Colors.indigo,
+                    ),
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeItem(IconData icon, String time, String date, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          time,
+          style: TextStyle(
+            fontSize: 20,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          date,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white38,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSunItem(IconData icon, String time, String label, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(height: 4),
+        Text(
+          time,
+          style: TextStyle(
+            fontSize: 14,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: Colors.white38,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBearingToggleSmall() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.1),
+      ),
+      child: Row(
+        children: [
+          Selector<CompassProvider, bool>(
+            selector: (_, p) => _showTrueBearing,
+            builder: (context, isTrue, _) => Row(
+              children: [
+                Icon(
+                  isTrue ? Icons.explore : Icons.compass_calibration,
+                  color: isTrue ? Colors.blueAccent : Colors.redAccent,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isTrue ? 'TRUE' : 'MAG',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isTrue ? Colors.blueAccent : Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBearingToggle() {
+    return GlassContainer(
+      blur: 8,
+      opacity: 0.08,
+      borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildToggleButton(
+            icon: Icons.compass_calibration,
+            label: 'Magnetic',
+            isActive: !_showTrueBearing,
+            color: Colors.redAccent,
+            onPressed: () => setState(() => _showTrueBearing = false),
+          ),
+          const SizedBox(width: 12),
+          _buildToggleButton(
+            icon: Icons.explore,
+            label: 'True North',
+            isActive: _showTrueBearing,
+            color: Colors.blueAccent,
+            onPressed: () => setState(() => _showTrueBearing = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isActive ? color.withOpacity(0.2) : Colors.transparent,
+          border: Border.all(
+            color: isActive ? color : Colors.white24,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isActive ? color : Colors.white38, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: isActive ? color : Colors.white38,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GlassContainer(
+        blur: 10,
+        opacity: 0.08,
+        borderRadius: BorderRadius.circular(24),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Text(
+              'QUICK ACTIONS',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white38,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuickActionButton(
+                    icon: Icons.navigation,
+                    label: 'Waypoints',
+                    color: Colors.cyanAccent,
+                    onPressed: () => _navigateTo(const WaypointManagerScreen()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildQuickActionButton(
+                    icon: Icons.fiber_manual_record,
+                    label: 'Track',
+                    color: Colors.redAccent,
+                    onPressed: () => _navigateTo(const TrackRecordingScreen()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuickActionButton(
+                    icon: Icons.crop_free,
+                    label: 'Area',
+                    color: Colors.greenAccent,
+                    onPressed: () => _navigateTo(const AreaMeasurementScreen()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildQuickActionButton(
+                    icon: Icons.aspect_ratio,
+                    label: 'Level',
+                    color: Colors.purpleAccent,
+                    onPressed: () => _navigateTo(const LevelScreen()),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                color.withOpacity(0.2),
+                color.withOpacity(0.1),
+              ],
+            ),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateTo(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+  }
+
+  Widget _buildGlassNavigation() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+      ),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItemGlass(Icons.explore, 'Compass', true, () {}),
+                _buildNavItemGlass(Icons.map, 'Map', false, () => _navigateTo(const MapScreen())),
+                _buildNavItemGlass(Icons.navigation, 'Points', false, () => _navigateTo(const WaypointManagerScreen())),
+                _buildNavItemGlass(Icons.build, 'Tools', false, () => _navigateTo(const ToolsScreen())),
+                _buildNavItemGlass(Icons.more_horiz, 'More', false, () => _showSettingsBottomSheet(context)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItemGlass(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: isActive ? Colors.white.withOpacity(0.15) : Colors.transparent,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isActive ? Colors.white : Colors.white54,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isActive ? Colors.white : Colors.white54,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -562,333 +884,145 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       seconds = 0;
       minutes += 1;
     }
-
     return '$degrees°${minutes.toString().padLeft(2, '0')}\'${seconds.toString().padLeft(2, '0')}"';
   }
-
-  Widget _buildBottomNavigation() {
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[700]!,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildBottomNavItem(
-            icon: Icons.explore,
-            label: 'Compass',
-            isActive: true,
-            onPressed: () {}, // Already on compass
-          ),
-          _buildBottomNavItem(
-            icon: Icons.map,
-            label: 'Map',
-            isActive: false,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MapScreen()),
-              );
-            },
-          ),
-          _buildBottomNavItem(
-            icon: Icons.navigation,
-            label: 'Waypoints',
-            isActive: false,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const WaypointManagerScreen()),
-              );
-            },
-          ),
-          _buildBottomNavItem(
-            icon: Icons.build,
-            label: 'Tools',
-            isActive: false,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ToolsScreen()),
-              );
-            },
-          ),
-          _buildBottomNavItem(
-            icon: Icons.settings,
-            label: 'More',
-            isActive: false,
-            onPressed: () => _showSettingsBottomSheet(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onPressed,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? Colors.white : Colors.grey[500],
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? Colors.white : Colors.grey[500],
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-
-  Widget _buildBearingToggle({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onPressed,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: isActive ? Colors.cyan.withOpacity(0.2) : Colors.transparent,
-          border: Border.all(
-            color: isActive ? Colors.cyan : Colors.grey[600]!,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.cyan : Colors.grey[400],
-              size: 20,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isActive ? Colors.cyan : Colors.grey[400],
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-   Widget _buildActionButton({
-     required IconData icon,
-     required String label,
-     required VoidCallback onPressed,
-     Color? color,
-   }) {
-     final buttonColor = color ?? Colors.cyan;
-     return Material(
-       color: Colors.transparent,
-       child: InkWell(
-         onTap: onPressed,
-         borderRadius: BorderRadius.circular(12),
-         child: Container(
-           decoration: BoxDecoration(
-             borderRadius: BorderRadius.circular(12),
-             gradient: LinearGradient(
-               colors: [
-                 Colors.grey[850]!,
-                 Colors.grey[900]!,
-               ],
-             ),
-             border: Border.all(
-               color: buttonColor.withOpacity(0.4),
-               width: 1.5,
-             ),
-             boxShadow: [
-               BoxShadow(
-                 color: buttonColor.withOpacity(0.2),
-                 blurRadius: 8,
-                 offset: const Offset(0, 4),
-               ),
-             ],
-           ),
-           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-           child: Column(
-             mainAxisSize: MainAxisSize.min,
-             children: [
-               AnimatedContainer(
-                 duration: const Duration(milliseconds: 200),
-                 transform: Matrix4.identity(),
-                 child: Icon(
-                   icon,
-                   color: buttonColor,
-                   size: 26,
-                 ),
-               ),
-               const SizedBox(height: 6),
-               Text(
-                 label,
-                 style: TextStyle(
-                   fontSize: 11,
-                   color: Colors.white,
-                   fontWeight: FontWeight.w600,
-                   letterSpacing: 0.5,
-                 ),
-                 textAlign: TextAlign.center,
-                 maxLines: 1,
-                 overflow: TextOverflow.ellipsis,
-               ),
-             ],
-           ),
-         ),
-       ),
-     );
-   }
 
   void _showSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
+      builder: (context) => ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1a1a2e).withOpacity(0.95),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
+                const SizedBox(height: 12),
                 Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey[600],
+                    color: Colors.white24,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text('All Features', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 16),
-                _menuTile(Icons.camera_alt, 'Camera GPS Tagging', 'Photo with GPS coordinates', Colors.cyan, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraGpsScreen()));
-                }),
-                _menuTile(Icons.trending_up, 'Slope Calculator', 'Calculate slope between two points', Colors.green, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SlopeCalculatorScreen()));
-                }),
-                _menuTile(Icons.straighten, 'Distance Measure', 'Measure distance by marking points', Colors.blue, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DistanceMeasureScreen()));
-                }),
-                _menuTile(Icons.qr_code, 'QR Code Share', 'Share waypoints via QR code', Colors.purple, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QrShareScreen()));
-                }),
-                _menuTile(Icons.qr_code_scanner, 'QR Code Scanner', 'Scan waypoints from QR codes', Colors.deepPurple, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QrScannerScreen()));
-                }),
-                _menuTile(Icons.table_chart, 'Excel Export', 'Export data to Excel spreadsheet', Colors.teal, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ExcelExportScreen()));
-                }),
-                _menuTile(Icons.mic, 'Voice Notes', 'Record voice notes at site', Colors.red, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VoiceNotesScreen()));
-                }),
-                _menuTile(Icons.aspect_ratio, 'Bubble Level', 'Check surface levelness', Colors.teal, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LevelScreen()));
-                }),
-                _menuTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.redAccent, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TrackRecordingScreen()));
-                }),
-                _menuTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.greenAccent, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AreaMeasurementScreen()));
-                }),
-                _menuTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.deepPurple, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ArCompassScreen()));
-                }),
-                _menuTile(Icons.folder, 'Projects', 'Manage site survey projects', Colors.blue, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProjectManagerScreen()));
-                }),
-                _menuTile(Icons.import_export, 'Import/Export', 'KML, GPX, CSV, JSON', Colors.orange, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ImportExportScreen()));
-                }),
-                _menuTile(Icons.brightness_6, 'Night Mode', 'Toggle dark/light theme', Colors.amber, () {
-                  context.read<ThemeProvider>().toggleTheme();
-                  Navigator.pop(context);
-                }),
-                _menuTile(Icons.height, 'Height Measure', 'Measure object height via angle', Colors.lightGreen, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const HeightMeasureScreen()));
-                }),
-                _menuTile(Icons.terrain, '3D Terrain Viewer', 'View waypoints in 3D', Colors.brown, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const TerrainViewerScreen()));
-                }),
-                _menuTile(Icons.picture_as_pdf, 'PDF Report', 'Generate survey report', Colors.redAccent, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PdfReportScreen()));
-                }),
-                _menuTile(Icons.swap_horiz, 'Coordinate Converter', 'DD, DMS, UTM formats', Colors.indigo, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CoordinateConverterScreen()));
-                }),
-                _menuTile(Icons.explore, 'Bearing Line', 'Draw boundary lines on map', Colors.orangeAccent, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const BearingLineScreen()));
-                }),
-                _menuTile(Icons.signal_cellular_alt, 'GPS Strength', 'Signal quality & tips', Colors.lime, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const GpsStrengthScreen()));
-                }),
-                _menuTile(Icons.bookmark, 'Saved Locations', 'Bookmarked places', Colors.pink, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedLocationsScreen()));
-                }),
-                _menuTile(Icons.cloud_upload, 'Cloud Backup', 'Auto backup to Firebase', Colors.cyanAccent, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CloudBackupScreen()));
-                }),
-                _menuTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-                }),
+                const Text(
+                  'ALL FEATURES',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      _settingsTile(Icons.camera_alt, 'Camera GPS Tagging', 'Photo with GPS coordinates', Colors.cyanAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const CameraGpsScreen());
+                      }),
+                      _settingsTile(Icons.trending_up, 'Slope Calculator', 'Calculate slope between two points', Colors.greenAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const SlopeCalculatorScreen());
+                      }),
+                      _settingsTile(Icons.straighten, 'Distance Measure', 'Measure distance by marking points', Colors.blueAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const DistanceMeasureScreen());
+                      }),
+                      _settingsTile(Icons.qr_code, 'QR Code Share', 'Share waypoints via QR code', Colors.purpleAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const QrShareScreen());
+                      }),
+                      _settingsTile(Icons.qr_code_scanner, 'QR Code Scanner', 'Scan waypoints from QR codes', Colors.deepPurpleAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const QrScannerScreen());
+                      }),
+                      _settingsTile(Icons.table_chart, 'Excel Export', 'Export data to Excel spreadsheet', Colors.tealAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const ExcelExportScreen());
+                      }),
+                      _settingsTile(Icons.mic, 'Voice Notes', 'Record voice notes at site', Colors.redAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const VoiceNotesScreen());
+                      }),
+                      _settingsTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.red, () {
+                        Navigator.pop(context);
+                        _navigateTo(const TrackRecordingScreen());
+                      }),
+                      _settingsTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.green, () {
+                        Navigator.pop(context);
+                        _navigateTo(const AreaMeasurementScreen());
+                      }),
+                      _settingsTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.deepPurple, () {
+                        Navigator.pop(context);
+                        _navigateTo(const ArCompassScreen());
+                      }),
+                      _settingsTile(Icons.folder, 'Projects', 'Manage site survey projects', Colors.blue, () {
+                        Navigator.pop(context);
+                        _navigateTo(const ProjectManagerScreen());
+                      }),
+                      _settingsTile(Icons.import_export, 'Import/Export', 'KML, GPX, CSV, JSON', Colors.orange, () {
+                        Navigator.pop(context);
+                        _navigateTo(const ImportExportScreen());
+                      }),
+                      _settingsTile(Icons.brightness_6, 'Night Mode', 'Toggle dark/light theme', Colors.amber, () {
+                        context.read<ThemeProvider>().toggleTheme();
+                        Navigator.pop(context);
+                      }),
+                      _settingsTile(Icons.height, 'Height Measure', 'Measure object height via angle', Colors.lightGreen, () {
+                        Navigator.pop(context);
+                        _navigateTo(const HeightMeasureScreen());
+                      }),
+                      _settingsTile(Icons.terrain, '3D Terrain Viewer', 'View waypoints in 3D', Colors.brown, () {
+                        Navigator.pop(context);
+                        _navigateTo(const TerrainViewerScreen());
+                      }),
+                      _settingsTile(Icons.picture_as_pdf, 'PDF Report', 'Generate survey report', Colors.redAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const PdfReportScreen());
+                      }),
+                      _settingsTile(Icons.swap_horiz, 'Coordinate Converter', 'DD, DMS, UTM formats', Colors.indigo, () {
+                        Navigator.pop(context);
+                        _navigateTo(const CoordinateConverterScreen());
+                      }),
+                      _settingsTile(Icons.explore, 'Bearing Line', 'Draw boundary lines on map', Colors.orangeAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const BearingLineScreen());
+                      }),
+                      _settingsTile(Icons.signal_cellular_alt, 'GPS Strength', 'Signal quality & tips', Colors.lime, () {
+                        Navigator.pop(context);
+                        _navigateTo(const GpsStrengthScreen());
+                      }),
+                      _settingsTile(Icons.bookmark, 'Saved Locations', 'Bookmarked places', Colors.pink, () {
+                        Navigator.pop(context);
+                        _navigateTo(const SavedLocationsScreen());
+                      }),
+                      _settingsTile(Icons.cloud_upload, 'Cloud Backup', 'Auto backup to Firebase', Colors.cyan, () {
+                        Navigator.pop(context);
+                        _navigateTo(const CloudBackupScreen());
+                      }),
+                      _settingsTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
+                        Navigator.pop(context);
+                        _navigateTo(const SettingsScreen());
+                      }),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -897,16 +1031,64 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _menuTile(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.2),
-        child: Icon(icon, color: color, size: 20),
+  Widget _settingsTile(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: color.withOpacity(0.1),
+              border: Border.all(
+                color: color.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withOpacity(0.2),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Colors.white38),
+              ],
+            ),
+          ),
+        ),
       ),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
     );
   }
 }
