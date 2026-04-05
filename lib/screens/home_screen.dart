@@ -33,6 +33,13 @@ import 'saved_locations_screen.dart';
 import 'cloud_backup_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'excel_export_screen.dart';
+import 'offline_maps_screen.dart';
+import 'data_sync_screen.dart';
+import 'survey_forms_screen.dart';
+import 'geofencing_screen.dart';
+import 'export_formats_screen.dart';
+import 'language_settings_screen.dart';
+import 'bluetooth_gps_screen.dart';
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
@@ -1014,6 +1021,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       _settingsTile(Icons.cloud_upload, 'Cloud Backup', 'Auto backup to Firebase', Colors.cyan, () {
                         Navigator.pop(context);
                         _navigateTo(const CloudBackupScreen());
+                      }),
+                      _settingsTile(Icons.download_for_offline, 'Offline Maps', 'Download maps for offline use', Colors.blue, () {
+                        Navigator.pop(context);
+                        _navigateTo(const OfflineMapsScreen());
+                      }),
+                      _settingsTile(Icons.sync, 'Data Sync', 'Sync data with cloud storage', Colors.purple, () {
+                        Navigator.pop(context);
+                        _navigateTo(const DataSyncScreen());
+                      }),
+                      _settingsTile(Icons.description, 'Survey Forms', 'Create custom survey forms', Colors.teal, () {
+                        Navigator.pop(context);
+                        _navigateTo(const SurveyFormsScreen());
+                      }),
+                      _settingsTile(Icons.location_searching, 'Geofencing', 'Zone alerts for locations', Colors.indigo, () {
+                        Navigator.pop(context);
+                        _navigateTo(const GeofencingScreen());
+                      }),
+                      _settingsTile(Icons.file_download, 'Export Formats', 'Export KML, GPX, CSV', Colors.green, () {
+                        Navigator.pop(context);
+                        _navigateTo(const ExportFormatsScreen());
+                      }),
+                      _settingsTile(Icons.language, 'Language', 'Change app language', Colors.amber, () {
+                        Navigator.pop(context);
+                        _navigateTo(const LanguageSettingsScreen());
+                      }),
+                      _settingsTile(Icons.bluetooth, 'Bluetooth GPS', 'Connect external GPS', Colors.cyanAccent, () {
+                        Navigator.pop(context);
+                        _navigateTo(const BluetoothGpsScreen());
                       }),
                       _settingsTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
                         Navigator.pop(context);
