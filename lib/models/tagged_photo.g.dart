@@ -8,7 +8,7 @@ part of 'tagged_photo.dart';
 
 class TaggedPhotoAdapter extends TypeAdapter<TaggedPhoto> {
   @override
-  final int typeId = 4;
+  final int typeId = 5;
 
   @override
   TaggedPhoto read(BinaryReader reader) {

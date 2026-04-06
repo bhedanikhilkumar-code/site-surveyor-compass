@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 part 'tagged_photo.g.dart';
 
-@HiveType(typeId: 4)
+@HiveType(typeId: 5)
 class TaggedPhoto {
   @HiveField(0)
   final String filePath;

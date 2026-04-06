@@ -11,6 +11,7 @@ import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
 import '../utils/geo_utils.dart';
+import '../widgets/glass_container.dart';
 import 'weather_screen.dart';
 import 'cogo_calculations_screen.dart';
 import 'stakeout_screen.dart';
@@ -75,23 +76,10 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
             Tab(icon: Icon(Icons.cloud), text: 'Weather'),
             Tab(icon: Icon(Icons.calculate), text: 'COGO'),
             Tab(icon: Icon(Icons.gps_fixed), text: 'Stakeout'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildBearingCalculator(),
-          _buildExportTab(),
-          _buildImportTab(),
-          _buildAltitudeChart(),
-          _buildWaypointCompare(),
-          const WeatherScreen(),
-          const CogoCalculationsScreen(),
-          const StakeoutScreen(),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // ========== BEARING CALCULATOR TAB ==========
@@ -198,13 +186,11 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 24),
               if (resultDistance.isNotEmpty) ...[
-                Container(
+                GlassContainer(
+                  blur: 10,
+                  opacity: 0.1,
+                  borderRadius: BorderRadius.circular(12),
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.cyan.withOpacity(0.3)),
-                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -243,31 +229,16 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
+            GlassContainer(
+              blur: 10,
+              opacity: 0.1,
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                const Icon(Icons.cloud_upload, size: 48, color: Colors.green),
-                const SizedBox(height: 8),
-                const Text(
-                  'Import Data',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Supported: JSON, GPX, KML, CSV',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text('Quick Import Methods', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 12),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Waypoint Summary', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () => _showJsonImportDialog(),
             icon: const Icon(Icons.code),
@@ -291,12 +262,11 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
           const SizedBox(height: 24),
           const Text('CSV Format', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 8),
-          Container(
+          GlassContainer(
+            blur: 10,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(8),
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(8),
-            ),
             child: const Text(
               'Name,Latitude,Longitude,Altitude\nCorner A,28.6139,77.2090,216\nCorner B,28.6145,77.2095,218',
               style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.cyan),
@@ -491,23 +461,22 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.place, size: 48, color: Colors.cyan),
-                const SizedBox(height: 8),
-                Text(
-                  '${_waypoints.length} waypoints loaded',
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ],
-            ),
+          GlassContainer(
+          blur: 10,
+          opacity: 0.1,
+          borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.place, size: 48, color: Colors.cyan),
+              const SizedBox(height: 8),
+              Text(
+                '${_waypoints.length} waypoints loaded',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ],
           ),
+        ),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _waypoints.isEmpty ? null : () => _exportAsCsv(),
@@ -531,12 +500,11 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
           ),
           const SizedBox(height: 24),
           if (_waypoints.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
-              ),
+          GlassContainer(
+            blur: 10,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

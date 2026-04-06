@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/glass_container.dart';
 
 class BluetoothGpsScreen extends StatefulWidget {
   const BluetoothGpsScreen({super.key});
@@ -58,25 +59,25 @@ class _BluetoothGpsScreenState extends State<BluetoothGpsScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              Card(
-                color: Colors.white.withOpacity(0.1),
+              GlassContainer(
+                blur: 10,
+                opacity: 0.1,
+                borderRadius: BorderRadius.circular(12),
                 margin: const EdgeInsets.all(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Supported Devices',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDeviceInfo('Garmin GPS', 'Bluetooth-enabled models'),
-                      _buildDeviceInfo('Trimble GPS', 'Bluetooth receivers'),
-                      _buildDeviceInfo('Leica GPS', 'Smart antennas'),
-                      _buildDeviceInfo('Any NMEA-compatible', 'Bluetooth GPS receiver'),
-                    ],
-                  ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Supported Devices',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDeviceInfo('Garmin GPS', 'Bluetooth-enabled models'),
+                    _buildDeviceInfo('Trimble GPS', 'Bluetooth receivers'),
+                    _buildDeviceInfo('Leica GPS', 'Smart antennas'),
+                    _buildDeviceInfo('Any NMEA-compatible', 'Bluetooth GPS receiver'),
+                  ],
                 ),
               ),
             ],

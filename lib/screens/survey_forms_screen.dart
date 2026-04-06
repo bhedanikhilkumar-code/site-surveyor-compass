@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../widgets/glass_container.dart';
 
 class SurveyFormsScreen extends StatefulWidget {
   const SurveyFormsScreen({super.key});
@@ -164,8 +165,10 @@ class _SurveyFormsScreenState extends State<SurveyFormsScreen> {
                 itemCount: _forms.length,
                 itemBuilder: (context, index) {
                   final form = _forms[index];
-                  return Card(
-                    color: Colors.white.withOpacity(0.1),
+                  return GlassContainer(
+                    blur: 10,
+                    opacity: 0.1,
+                    borderRadius: BorderRadius.circular(12),
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
                       leading: const Icon(Icons.description, color: Colors.cyanAccent),

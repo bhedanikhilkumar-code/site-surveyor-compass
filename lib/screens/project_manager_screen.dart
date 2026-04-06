@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/project_model.dart';
 import '../services/project_service.dart';
+import '../widgets/glass_container.dart';
 
 class ProjectManagerScreen extends StatefulWidget {
   const ProjectManagerScreen({Key? key}) : super(key: key);
@@ -115,9 +116,10 @@ class _ProjectManagerScreenState extends State<ProjectManagerScreen> {
               child: const Text('Create'),
             ),
           ],
-        ),
-      ),
-    );
+              ),
+            ),
+          ),
+        );
   }
 
   Future<void> _editProject(SiteProject project) async {
@@ -177,21 +179,36 @@ class _ProjectManagerScreenState extends State<ProjectManagerScreen> {
         title: const Text('Projects'),
         elevation: 0,
       ),
-      body: ListView.builder(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF1a1a2e),
+              const Color(0xFF16213e),
+              const Color(0xFF0f3460),
+            ],
+          ),
+        ),
+        child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: _projects.length,
         itemBuilder: (context, index) {
           final project = _projects[index];
           final isActive = project.id == _activeProjectId;
-          return Card(
-            color: isActive ? Colors.grey[850] : Colors.grey[900],
-            shape: RoundedRectangleBorder(
-              side: isActive
-                  ? BorderSide(color: Color(int.parse(project.color.replaceFirst('#', '0xFF'))), width: 2)
-                  : BorderSide.none,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
+          return GlassContainer(
+            blur: 10,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                border: isActive
+                    ? Border.all(color: Color(int.parse(project.color.replaceFirst('#', '0xFF'))), width: 2)
+                    : null,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Color(int.parse(project.color.replaceFirst('#', '0xFF'))),
                 child: Text(
@@ -259,10 +276,11 @@ class _ProjectManagerScreenState extends State<ProjectManagerScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createProject,
-        child: const Icon(Icons.add),
-      ),
-    );
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: _createProject,
+      child: const Icon(Icons.add),
+    ),
+  );
   }
 }

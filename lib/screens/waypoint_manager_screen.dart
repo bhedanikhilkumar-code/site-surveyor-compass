@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
+import '../widgets/glass_container.dart';
 import 'navigate_waypoint_screen.dart';
 import 'package:intl/intl.dart';
 
@@ -123,8 +124,20 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           IconButton(icon: const Icon(Icons.refresh), onPressed: _refreshWaypoints),
         ],
       ),
-      body: Column(
-        children: [
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF1a1a2e),
+              const Color(0xFF16213e),
+              const Color(0xFF0f3460),
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -147,7 +160,7 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                       )
                     : null,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+          ),
             ),
           ),
           Expanded(
@@ -182,15 +195,16 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
                         ),
                         const SizedBox(height: 8),
-                        if (!_isSearching)
-                          Text(
-                            'Tap the + button to create your first waypoint',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                          ),
+                        ...[
+                          if (!_isSearching)
+                            Text(
+                              'Tap the + button to create your first waypoint',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                            ),
+                        ],
                       ],
-                    ),
-                  );
-                }
+                    );
+                  }
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   itemCount: waypoints.length,
@@ -201,17 +215,21 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddWaypointDialog(),
-        tooltip: 'Add Waypoint',
-        child: const Icon(Icons.add),
-      ),
-    );
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: () => _showAddWaypointDialog(),
+      tooltip: 'Add Waypoint',
+      child: const Icon(Icons.add),
+    ),
+  );
   }
 
   Widget _buildWaypointCard(Waypoint waypoint) {
     final dateFormat = DateFormat('MMM dd, yyyy - HH:mm');
-    return Card(
+    return GlassContainer(
+      blur: 10,
+      opacity: 0.1,
+      borderRadius: BorderRadius.circular(12),
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),

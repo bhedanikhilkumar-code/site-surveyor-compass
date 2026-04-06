@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:share_plus/share_plus.dart';
+import '../widgets/glass_container.dart';
 
 class DataSyncScreen extends StatefulWidget {
   const DataSyncScreen({super.key});
@@ -181,8 +182,10 @@ class _DataSyncScreenState extends State<DataSyncScreen> {
     required String subtitle,
     VoidCallback? onTap,
   }) {
-    return Card(
-      color: Colors.white.withOpacity(0.1),
+    return GlassContainer(
+      blur: 10,
+      opacity: 0.1,
+      borderRadius: BorderRadius.circular(12),
       child: ListTile(
         leading: Icon(icon, color: Colors.cyanAccent, size: 32),
         title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),

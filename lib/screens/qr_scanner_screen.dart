@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
+import '../widgets/glass_container.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({Key? key}) : super(key: key);
@@ -247,92 +248,92 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Card(
-            color: Colors.grey[900],
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          GlassContainer(
+            blur: 10,
+            opacity: 0.1,
+            borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      _scanResult ?? 'No data',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_importedWaypoint != null) ...[
+                  const Divider(color: Colors.grey),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Waypoint Details',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDetailRow('Name', _importedWaypoint!.name),
+                  _buildDetailRow('Latitude', _importedWaypoint!.latitude.toStringAsFixed(6)),
+                  _buildDetailRow('Longitude', _importedWaypoint!.longitude.toStringAsFixed(6)),
+                  _buildDetailRow('Altitude', '${_importedWaypoint!.altitude.toStringAsFixed(1)} m'),
+                  _buildDetailRow('Bearing', '${_importedWaypoint!.bearing.toStringAsFixed(1)}°'),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.green, size: 28),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saveWaypoint,
+                          icon: const Icon(Icons.save),
+                          label: const Text('Save Waypoint'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Text(
-                        _scanResult ?? 'No data',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final url = 'https://maps.google.com/?q=${_importedWaypoint!.latitude},${_importedWaypoint!.longitude}';
+                            SystemChrome.setApplicationSwitcherDescription(
+                              ApplicationSwitcherDescription(
+                                label: 'Opening Maps',
+                                primaryColor: 0xFF000000,
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.map),
+                          label: const Text('View on Map'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  if (_importedWaypoint != null) ...[
-                    const Divider(color: Colors.grey),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Waypoint Details',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow('Name', _importedWaypoint!.name),
-                    _buildDetailRow('Latitude', _importedWaypoint!.latitude.toStringAsFixed(6)),
-                    _buildDetailRow('Longitude', _importedWaypoint!.longitude.toStringAsFixed(6)),
-                    _buildDetailRow('Altitude', '${_importedWaypoint!.altitude.toStringAsFixed(1)} m'),
-                    _buildDetailRow('Bearing', '${_importedWaypoint!.bearing.toStringAsFixed(1)}°'),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _saveWaypoint,
-                            icon: const Icon(Icons.save),
-                            label: const Text('Save Waypoint'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              final url = 'https://maps.google.com/?q=${_importedWaypoint!.latitude},${_importedWaypoint!.longitude}';
-                              SystemChrome.setApplicationSwitcherDescription(
-                                ApplicationSwitcherDescription(
-                                  label: 'Opening Maps',
-                                  primaryColor: 0xFF000000,
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.map),
-                            label: const Text('View on Map'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (_importedWaypoint == null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _copyToClipboard,
-                            icon: const Icon(Icons.copy),
-                            label: const Text('Copy'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
-              ),
+                if (_importedWaypoint == null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _copyToClipboard,
+                          icon: const Icon(Icons.copy),
+                          label: const Text('Copy'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 16),

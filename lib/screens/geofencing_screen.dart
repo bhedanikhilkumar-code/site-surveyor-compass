@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
+import '../widgets/glass_container.dart';
 
 class GeofencingScreen extends StatefulWidget {
   const GeofencingScreen({super.key});
@@ -221,8 +222,10 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                       itemCount: _zones.length,
                       itemBuilder: (context, index) {
                         final zone = _zones[index];
-                        return Card(
-                          color: Colors.white.withOpacity(0.1),
+                        return GlassContainer(
+                          blur: 10,
+                          opacity: 0.1,
+                          borderRadius: BorderRadius.circular(12),
                           margin: const EdgeInsets.only(bottom: 12),
                           child: ListTile(
                             leading: Icon(

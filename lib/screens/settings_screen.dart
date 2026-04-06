@@ -6,6 +6,7 @@ import '../services/gps_service.dart';
 import '../services/waypoint_service.dart';
 import '../services/track_service.dart';
 import '../services/project_service.dart';
+import '../widgets/glass_container.dart';
 import '../screens/project_manager_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -59,16 +60,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF1a1a2e),
+              const Color(0xFF16213e),
+              const Color(0xFF0f3460),
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Compass', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan)),
             const SizedBox(height: 8),
             Consumer<CompassProvider>(
-              builder: (context, compass, _) => Card(
-                color: Colors.grey[900],
+              builder: (context, compass, _) => GlassContainer(
+                blur: 10,
+                opacity: 0.1,
+                borderRadius: BorderRadius.circular(12),
                 child: Column(
                   children: [
                     ListTile(
@@ -105,8 +120,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Text('GPS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan)),
             const SizedBox(height: 8),
             Consumer<GpsService>(
-              builder: (context, gps, _) => Card(
-                color: Colors.grey[900],
+              builder: (context, gps, _) => GlassContainer(
+                blur: 10,
+                opacity: 0.1,
+                borderRadius: BorderRadius.circular(12),
                 child: Column(
                   children: [
                     ListTile(
@@ -136,8 +153,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 24),
             const Text('Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan)),
             const SizedBox(height: 8),
-            Card(
-              color: Colors.grey[900],
+            GlassContainer(
+              blur: 10,
+              opacity: 0.1,
+              borderRadius: BorderRadius.circular(12),
               child: Column(
                 children: [
                   ListTile(
@@ -169,125 +188,129 @@ class _SettingsScreenState extends State<SettingsScreen> {
              const SizedBox(height: 24),
              const Text('Theme', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.cyan)),
              const SizedBox(height: 8),
-             Consumer<ThemeProvider>(
-               builder: (context, themeProvider, _) => Card(
-                 color: Colors.grey[900],
-                 child: Column(
-                   children: [
-                     ListTile(
-                       leading: const Icon(Icons.brightness_6, color: Colors.amber),
-                       title: const Text('Dark Mode', style: TextStyle(color: Colors.white)),
-                       trailing: Switch(
-                         value: themeProvider.isDarkMode,
-                         onChanged: (_) => themeProvider.toggleTheme(),
-                         activeColor: themeProvider.primaryColor,
-                       ),
-                     ),
-                     const Divider(height: 1, color: Colors.grey),
-                     ListTile(
-                       leading: const Icon(Icons.color_lens, color: Colors.blueAccent),
-                       title: const Text('Theme Color', style: TextStyle(color: Colors.white)),
-                       subtitle: const Text('Customize primary color', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                       trailing: PopupMenuButton<Color>(
-                         onSelected: (color) => themeProvider.setPrimaryColor(color),
-                         itemBuilder: (context) => [
-                           PopupMenuItem(
-                             value: Colors.blueAccent,
-                             child: Row(
-                               children: [
-                                 Container(
-                                   width: 20,
-                                   height: 20,
-                                   decoration: BoxDecoration(
-                                     color: Colors.blueAccent,
-                                     borderRadius: BorderRadius.circular(4),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
-                                 const Text('Blue'),
-                               ],
-                             ),
-                           ),
-                           PopupMenuItem(
-                             value: Colors.green,
-                             child: Row(
-                               children: [
-                                 Container(
-                                   width: 20,
-                                   height: 20,
-                                   decoration: BoxDecoration(
-                                     color: Colors.green,
-                                     borderRadius: BorderRadius.circular(4),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
-                                 const Text('Green'),
-                               ],
-                             ),
-                           ),
-                           PopupMenuItem(
-                             value: Colors.orange,
-                             child: Row(
-                               children: [
-                                 Container(
-                                   width: 20,
-                                   height: 20,
-                                   decoration: BoxDecoration(
-                                     color: Colors.orange,
-                                     borderRadius: BorderRadius.circular(4),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
-                                 const Text('Orange'),
-                               ],
-                             ),
-                           ),
-                           PopupMenuItem(
-                             value: Colors.purple,
-                             child: Row(
-                               children: [
-                                 Container(
-                                   width: 20,
-                                   height: 20,
-                                   decoration: BoxDecoration(
-                                     color: Colors.purple,
-                                     borderRadius: BorderRadius.circular(4),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
-                                 const Text('Purple'),
-                               ],
-                             ),
-                           ),
-                           PopupMenuItem(
-                             value: Colors.red,
-                             child: Row(
-                               children: [
-                                 Container(
-                                   width: 20,
-                                   height: 20,
-                                   decoration: BoxDecoration(
-                                     color: Colors.red,
-                                     borderRadius: BorderRadius.circular(4),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 8),
-                                 const Text('Red'),
-                               ],
-                             ),
-                           ),
-                         ],
-                       ),
-                     ),
-                   ],
-                 ),
-               ),
-             ),
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) => GlassContainer(
+                  blur: 10,
+                  opacity: 0.1,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.brightness_6, color: Colors.amber),
+                        title: const Text('Dark Mode', style: TextStyle(color: Colors.white)),
+                        trailing: Switch(
+                          value: themeProvider.isDarkMode,
+                          onChanged: (_) => themeProvider.toggleTheme(),
+                          activeColor: themeProvider.primaryColor,
+                        ),
+                      ),
+                      const Divider(height: 1, color: Colors.grey),
+                      ListTile(
+                        leading: const Icon(Icons.color_lens, color: Colors.blueAccent),
+                        title: const Text('Theme Color', style: TextStyle(color: Colors.white)),
+                        subtitle: const Text('Customize primary color', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        trailing: PopupMenuButton<Color>(
+                          onSelected: (color) => themeProvider.setPrimaryColor(color),
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: Colors.blueAccent,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueAccent,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Blue'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: Colors.green,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Green'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: Colors.orange,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Orange'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: Colors.purple,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Purple'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: Colors.red,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Red'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
              const SizedBox(height: 24),
              const Text('Danger Zone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red)),
             const SizedBox(height: 8),
-            Card(
-              color: Colors.grey[900],
+            GlassContainer(
+              blur: 10,
+              opacity: 0.1,
+              borderRadius: BorderRadius.circular(12),
               child: Column(
                 children: [
                   ListTile(
@@ -321,6 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
