@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
+import 'package:geomag/geomag.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:vector_math/vector_math_64.dart' as v;
-import 'package:geomag/geomag.dart';
-import 'dart:math';
 
 class CompassProvider extends ChangeNotifier {
   double _bearing = 0.0;
@@ -44,7 +45,7 @@ class CompassProvider extends ChangeNotifier {
 
   // Kalman-like filter for bearing
   double _bearingEstimate = 0;
-  double _bearingErrorEstimate = 1.0;
+  double _bearingErrorEstimate = 1;
   static const double _bearingQ = 0.01;  // Process noise
   static const double _bearingR = 0.5;   // Measurement noise
 
@@ -84,20 +85,22 @@ class CompassProvider extends ChangeNotifier {
     try {
       _accSub = accelerometerEventStream().listen(
         (AccelerometerEvent event) {
-          if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
+          if (event.x.isNaN || event.y.isNaN || event.z.isNaN)
+            return;
           _accelFiltered.x = _accelFiltered.x + _sensorAlpha * (event.x - _accelFiltered.x);
           _accelFiltered.y = _accelFiltered.y + _sensorAlpha * (event.y - _accelFiltered.y);
           _accelFiltered.z = _accelFiltered.z + _sensorAlpha * (event.z - _accelFiltered.z);
           _updateCalculations();
         },
         onError: (error) {
-          debugPrint("Accelerometer error: $error");
+          debugPrint('Accelerometer error: $error');
         },
       );
 
       _magSub = magnetometerEventStream().listen(
         (MagnetometerEvent event) {
-          if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
+          if (event.x.isNaN || event.y.isNaN || event.z.isNaN)
+            return;
 
           _updateMagOffsets(event.x, event.y, event.z);
 
@@ -116,14 +119,15 @@ class CompassProvider extends ChangeNotifier {
           _updateCalculations();
         },
         onError: (error) {
-          debugPrint("Magnetometer error: $error");
+          debugPrint('Magnetometer error: $error');
         },
       );
 
       // IMPROVED: Gyroscope for complementary filter with better integration and drift correction
       _gyroSub = gyroscopeEventStream().listen(
         (GyroscopeEvent event) {
-          if (event.x.isNaN || event.y.isNaN || event.z.isNaN) return;
+          if (event.x.isNaN || event.y.isNaN || event.z.isNaN)
+            return;
 
           final now = DateTime.now().microsecondsSinceEpoch / 1000000.0;
           if (_lastGyroTimestamp > 0) {
@@ -154,16 +158,17 @@ class CompassProvider extends ChangeNotifier {
           _lastGyroTimestamp = now;
         },
         onError: (error) {
-          debugPrint("Gyroscope error: $error");
+          debugPrint('Gyroscope error: $error');
         },
       );
-    } catch (e) {
-      debugPrint("Compass sensors initialization error: $e");
+    } on Exception catch (e) {
+      debugPrint('Compass sensors initialization error: $e');
     }
   }
 
   void _detectMagneticDisturbance() {
-    if (_baselineFieldStrength <= 0) return;
+    if (_baselineFieldStrength <= 0)
+      return;
 
     // If field strength deviates more than 30% from baseline, flag disturbance
     final deviation = (_magneticFieldStrength - _baselineFieldStrength).abs() / _baselineFieldStrength;
@@ -171,7 +176,8 @@ class CompassProvider extends ChangeNotifier {
   }
 
   void _updateMagOffsets(double x, double y, double z) {
-    if (x.isNaN || y.isNaN || z.isNaN) return;
+    if (x.isNaN || y.isNaN || z.isNaN)
+      return;
 
     _magMin.x = min(_magMin.x, x);
     _magMax.x = max(_magMax.x, x);
@@ -196,18 +202,20 @@ class CompassProvider extends ChangeNotifier {
 
   void _updateCalculations() {
     // Skip updates if paused to save battery
-    if (_paused) return;
+    if (_paused)
+      return;
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - _lastUpdateMs < _minIntervalMs) return;
+    if (now - _lastUpdateMs < _minIntervalMs)
+      return;
     _lastUpdateMs = now;
 
     try {
       _calculateOrientation();
       _calculateHeading();
       _safeNotifyListeners();
-    } catch (e) {
-      debugPrint("Compass calculation error: $e");
+    } on Exception catch (e) {
+      debugPrint('Compass calculation error: $e');
     }
   }
 
@@ -222,7 +230,8 @@ class CompassProvider extends ChangeNotifier {
   }
 
   void _calculateHeading() {
-    if (_accelFiltered.length == 0 || _magFiltered.length == 0) return;
+    if (_accelFiltered.length == 0 || _magFiltered.length == 0)
+      return;
 
     double magneticHeading;
 
@@ -242,7 +251,7 @@ class CompassProvider extends ChangeNotifier {
       // FULL ACCURACY MODE: Advanced tilt-compensated calculation with improved stability
       // Normalize accelerometer vector (down direction)
       v.Vector3 down = _accelFiltered.clone();
-      double accelNorm = sqrt(down.x * down.x + down.y * down.y + down.z * down.z);
+      final double accelNorm = sqrt(down.x * down.x + down.y * down.y + down.z * down.z);
       if (accelNorm > 0) {
         down.x /= accelNorm;
         down.y /= accelNorm;
@@ -251,7 +260,7 @@ class CompassProvider extends ChangeNotifier {
 
       // Normalize magnetometer vector
       v.Vector3 mag = _magFiltered.clone();
-      double magNorm = sqrt(mag.x * mag.x + mag.y * mag.y + mag.z * mag.z);
+      final double magNorm = sqrt(mag.x * mag.x + mag.y * mag.y + mag.z * mag.z);
       if (magNorm > 0) {
         mag.x /= magNorm;
         mag.y /= magNorm;
@@ -260,7 +269,7 @@ class CompassProvider extends ChangeNotifier {
 
       // Calculate east vector (cross product of down and magnetic north)
       v.Vector3 east = down.cross(mag);
-      double eastNorm = sqrt(east.x * east.x + east.y * east.y + east.z * east.z);
+      final double eastNorm = sqrt(east.x * east.x + east.y * east.y + east.z * east.z);
       if (eastNorm > 0) {
         east.x /= eastNorm;
         east.y /= eastNorm;
@@ -269,7 +278,7 @@ class CompassProvider extends ChangeNotifier {
 
       // Calculate north vector (cross product of east and down)
       v.Vector3 north = east.cross(down);
-      double northNorm = sqrt(north.x * north.x + north.y * north.y + north.z * north.z);
+      final double northNorm = sqrt(north.x * north.x + north.y * north.y + north.z * north.z);
       if (northNorm > 0) {
         north.x /= northNorm;
         north.y /= northNorm;
@@ -283,40 +292,38 @@ class CompassProvider extends ChangeNotifier {
       // FIX: Better complementary filter with adaptive weighting and drift correction
       double fusedHeading = magneticHeading;
       if (_gyroInitialized) {
-        // Adaptive complementary filter based on magnetic field stability
-        double filterWeight = _magneticDisturbance ? 0.85 : 0.7; // Trust mag more when stable
+    // Adaptive complementary filter based on magnetic field stability
+    final double filterWeight = _magneticDisturbance ? 0.85 : 0.7; // Trust mag more when stable
 
         // Calculate shortest angular difference with better handling
         double headingDiff = ((magneticHeading - _gyroHeading + 540) % 360) - 180;
         
         // Limit correction to prevent jumps
-        if (headingDiff.abs() > 30) {
+        if (headingDiff.abs() > 30)
           headingDiff = headingDiff.sign * 30; // Cap at 30 degrees
-        }
         
         fusedHeading = _gyroHeading + filterWeight * headingDiff;
         fusedHeading = ((fusedHeading % 360) + 360) % 360;
 
-        // Update gyro reference with gradual correction and drift compensation
-        double gyroCorrection = 0.01 * headingDiff;
+    // Update gyro reference with gradual correction and drift compensation
+    final double gyroCorrection = 0.01 * headingDiff;
         _gyroHeading += gyroCorrection;
         
-        // Additional drift correction when magnetic field is stable
-        if (!_magneticDisturbance && _baselineFieldStrength > 0) {
-          double driftCorrection = 0.00005 * (_bearingEstimate - _gyroHeading);
-          _gyroHeading += driftCorrection;
-        }
+    // Additional drift correction when magnetic field is stable
+    if (!_magneticDisturbance && _baselineFieldStrength > 0) {
+      final double driftCorrection = 0.00005 * (_bearingEstimate - _gyroHeading);
+      _gyroHeading += driftCorrection;
+    }
         
         _gyroHeading = ((_gyroHeading % 360) + 360) % 360;
       }
 
-      // FIX: Improved Kalman filter for bearing with better parameters for stability
-      double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
-      
-      // Limit delta to prevent sudden jumps
-      if (delta.abs() > 45) {
-        delta = delta.sign * 45; // Cap at 45 degrees
-      }
+  // FIX: Improved Kalman filter for bearing with better parameters for stability
+  double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
+
+  // Limit delta to prevent sudden jumps
+  if (delta.abs() > 45)
+    delta = delta.sign * 45; // Cap at 45 degrees
       
       _bearingErrorEstimate += _bearingQ;
       final kalmanGain = _bearingErrorEstimate / (_bearingErrorEstimate + _bearingR);
@@ -324,8 +331,8 @@ class CompassProvider extends ChangeNotifier {
       _bearingEstimate = ((_bearingEstimate % 360) + 360) % 360;
       _bearingErrorEstimate *= (1 - kalmanGain);
 
-      // FIX: Apply adaptive bearing smoothing
-      double smoothingFactor = _magneticDisturbance ? 0.3 : _bearingAlpha; // Less smoothing when disturbed
+  // FIX: Apply adaptive bearing smoothing
+  final double smoothingFactor = _magneticDisturbance ? 0.3 : _bearingAlpha; // Less smoothing when disturbed
       _bearing = _bearing * (1 - smoothingFactor) + _bearingEstimate * smoothingFactor;
       
       // Ensure bearing stays in 0-360 range
@@ -344,12 +351,14 @@ class CompassProvider extends ChangeNotifier {
 
   void updateLocation(double lat, double lon, double alt) {
     try {
-      if (lat.isNaN || lon.isNaN || alt.isNaN) return;
+      if (lat.isNaN || lon.isNaN || alt.isNaN)
+        return;
 
       // IMPROVED: Smaller threshold for more frequent declination updates (was 0.1° ~11km)
       final latDelta = (lat - _lastDeclLat).abs();
       final lonDelta = (lon - _lastDeclLon).abs();
-      if (_geoMag != null && latDelta < 0.01 && lonDelta < 0.01) return; // ~1km threshold
+      if (_geoMag != null && latDelta < 0.01 && lonDelta < 0.01)
+        return; // ~1km threshold
 
       _geoMag ??= GeoMag();
       final result = _geoMag!.calculate(lat, lon, alt * 3.28084, DateTime.now());
@@ -358,13 +367,14 @@ class CompassProvider extends ChangeNotifier {
       _lastDeclLat = lat;
       _lastDeclLon = lon;
       _safeNotifyListeners();
-    } catch (e) {
-      debugPrint("GeoMag calculation error: $e");
+    } on Exception catch (e) {
+      debugPrint('GeoMag calculation error: $e');
     }
   }
 
   void setMagneticDeclination(double declination) {
-    if (declination.isNaN) return;
+    if (declination.isNaN)
+      return;
     _magneticDeclination = declination;
     _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
     _safeNotifyListeners();
@@ -396,7 +406,8 @@ class CompassProvider extends ChangeNotifier {
   }
 
   String getCardinalDirection(double bearing) {
-    if (bearing.isNaN) return 'N';
+    if (bearing.isNaN)
+      return 'N';
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     int index = ((bearing + 11.25) / 22.5).toInt() % 16;
     return directions[index];

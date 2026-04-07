@@ -1,23 +1,25 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/gps_service.dart';
 import '../utils/geo_utils.dart';
 import '../widgets/glass_container.dart';
-import 'weather_screen.dart';
 import 'cogo_calculations_screen.dart';
 import 'stakeout_screen.dart';
+import 'weather_screen.dart';
 
 class ToolsScreen extends StatefulWidget {
-  const ToolsScreen({Key? key}) : super(key: key);
+  const ToolsScreen({super.key});
 
   @override
   State<ToolsScreen> createState() => _ToolsScreenState();
