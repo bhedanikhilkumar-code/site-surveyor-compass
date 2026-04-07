@@ -76,10 +76,23 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
             Tab(icon: Icon(Icons.cloud), text: 'Weather'),
             Tab(icon: Icon(Icons.calculate), text: 'COGO'),
             Tab(icon: Icon(Icons.gps_fixed), text: 'Stakeout'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildBearingCalculator(),
+          _buildExportTab(),
+          _buildImportTab(),
+          _buildAltitudeChart(),
+          _buildWaypointCompare(),
+          WeatherScreen(),
+          CogoCalculationsScreen(),
+          StakeoutScreen(),
         ],
       ),
-    ),
-  );
+    );
   }
 
   // ========== BEARING CALCULATOR TAB ==========

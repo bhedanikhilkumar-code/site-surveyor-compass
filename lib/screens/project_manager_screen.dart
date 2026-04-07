@@ -116,10 +116,7 @@ class _ProjectManagerScreenState extends State<ProjectManagerScreen> {
               child: const Text('Create'),
             ),
           ],
-              ),
-            ),
-          ),
-        );
+        ) ) );
   }
 
   Future<void> _editProject(SiteProject project) async {
