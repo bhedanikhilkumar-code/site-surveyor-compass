@@ -120,16 +120,16 @@ class SiteSurveyorCompassApp extends StatelessWidget {
         ),
         Provider<ApiWaypointService>(create: (_) => apiWaypointService),
       ],
-       child: Consumer<ThemeProvider>(
-         builder: (context, themeProvider, _) => MaterialApp(
-           title: 'Site Surveyor Compass',
-           debugShowCheckedModeBanner: false,
-           theme: themeProvider.getThemeData(context: context),
-           darkTheme: themeProvider.getThemeData(context: context),
-           themeMode: themeProvider.themeMode,
-           home: const HomeScreen(),
-         ),
-       ),
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) => MaterialApp(
+            title: 'Site Surveyor Compass',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.getLightTheme(),
+            darkTheme: themeProvider.getDarkTheme(),
+            themeMode: themeProvider.themeMode,
+            home: const HomeScreen(),
+          ),
+        ),
     );
   }
 }

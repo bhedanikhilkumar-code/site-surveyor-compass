@@ -8,7 +8,9 @@ import '../providers/theme_provider.dart';
 import '../services/gps_service.dart';
 import '../widgets/compass_dial.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/premium_widgets.dart';
 import '../utils/geo_utils.dart';
+import '../utils/app_constants.dart';
 import 'waypoint_manager_screen.dart';
 import 'level_screen.dart';
 import 'map_screen.dart';
@@ -303,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 letterSpacing: 2,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.sm),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
