@@ -184,27 +184,8 @@ class _WaypointManagerScreenState extends State<WaypointManagerScreen> {
                 }
                 final waypoints = snapshot.data ?? [];
                 if (waypoints.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.location_off, size: 64, color: Colors.grey[300]),
-                        const SizedBox(height: 16),
-                        Text(
-                          _isSearching ? 'No waypoints found' : 'No waypoints saved yet',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
-                        ),
-                        const SizedBox(height: 8),
-                        ...[
-                          if (!_isSearching)
-                            Text(
-                              'Tap the + button to create your first waypoint',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                            ),
-                        ],
-                      ],
-                    );
-                  }
+                  return const Center(child: Text('No waypoints'));
+                }
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   itemCount: waypoints.length,

@@ -239,57 +239,7 @@ class _ToolsScreenState extends State<ToolsScreen> with SingleTickerProviderStat
 
   // ========== IMPORT TAB ==========
   Widget _buildImportTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-            GlassContainer(
-              blur: 10,
-              opacity: 0.1,
-              borderRadius: BorderRadius.circular(12),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Waypoint Summary', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () => _showJsonImportDialog(),
-            icon: const Icon(Icons.code),
-            label: const Text('Paste JSON Data'),
-            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.green),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () => _showGpxImportDialog(),
-            icon: const Icon(Icons.explore),
-            label: const Text('Paste GPX Data'),
-            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.orange),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: () => _showKmlImportDialog(),
-            icon: const Icon(Icons.map),
-            label: const Text('Paste KML Data'),
-            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16), backgroundColor: Colors.blue),
-          ),
-          const SizedBox(height: 24),
-          const Text('CSV Format', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 8),
-          GlassContainer(
-            blur: 10,
-            opacity: 0.1,
-            borderRadius: BorderRadius.circular(8),
-            padding: const EdgeInsets.all(12),
-            child: const Text(
-              'Name,Latitude,Longitude,Altitude\nCorner A,28.6139,77.2090,216\nCorner B,28.6145,77.2095,218',
-              style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: Colors.cyan),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const Center(child: Text('Import Tab'));
   }
 
   void _showJsonImportDialog() {
