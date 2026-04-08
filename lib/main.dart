@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -29,12 +27,12 @@ void main() async {
     // Initialize Firebase (optional - app works without it)
     try {
       await Firebase.initializeApp();
-    } on Exception catch (e) {
-      // Firebase initialization failed - Using offline mode
-    }
-  } on Exception catch (e) {
-    // Initialization error
-  }
+     } on Exception catch (e) {
+       debugPrint('Firebase initialization failed: $e - Using offline mode');
+     }
+   } on Exception catch (e) {
+     debugPrint('Initialization error: $e');
+   }
   
   try {
     // Initialize Hive for local storage
@@ -66,9 +64,9 @@ void main() async {
       compassProvider: compassProvider,
       themeProvider: themeProvider,
     ));
-  } on Exception catch (e) {
-    // App initialization error
-  }
+   } on Exception catch (e) {
+     debugPrint('App initialization error: $e');
+   }
 }
 
 Future<void> _requestPermissions() async {
@@ -90,9 +88,9 @@ Future<void> _requestPermissions() async {
     } else {
       // Sensor permission granted - Compass enabled
     }
-  } on Exception catch (e) {
-    // Permission request error - Continue anyway - app can work with limited functionality
-  }
+   } on Exception catch (e) {
+     debugPrint('Permission request error: $e - Continue anyway - app can work with limited functionality');
+   }
 }
 
 class SiteSurveyorCompassApp extends StatelessWidget {

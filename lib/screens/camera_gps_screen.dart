@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:exif/exif.dart';
 import '../services/gps_service.dart';
 import '../providers/compass_provider.dart';
 import '../utils/geo_utils.dart';

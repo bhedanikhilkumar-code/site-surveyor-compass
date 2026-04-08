@@ -112,7 +112,7 @@ linter:
 
 
 
-    - prefer_if_on_single_line_is_else_null
+
     - prefer_initializing_formals
     - prefer_inlined_adds
     - prefer_int_literals

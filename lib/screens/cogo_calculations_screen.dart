@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
-import '../models/waypoint_model.dart';
 import '../services/api_waypoint_service.dart';
 
 class CogoCalculationsScreen extends StatefulWidget {
