@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:geolocator/geolocator.dart';
+
 import '../services/gps_service.dart';
 
 class GpsStrengthScreen extends StatefulWidget {

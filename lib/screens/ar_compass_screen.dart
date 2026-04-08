@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/waypoint_model.dart';
@@ -179,11 +179,6 @@ class ArCompassPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final centerX = size.width / 2;
     final topY = size.height * 0.3;
-
-    final headingPaint = Paint()
-      ..color = Colors.cyan
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
 
     final headingText = TextPainter(
       text: TextSpan(

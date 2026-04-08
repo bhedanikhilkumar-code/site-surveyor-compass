@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/compass_provider.dart';
-import '../services/gps_service.dart';
+
 
 class HeightMeasureScreen extends StatefulWidget {
   const HeightMeasureScreen({Key? key}) : super(key: key);

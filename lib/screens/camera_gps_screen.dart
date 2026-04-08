@@ -41,7 +41,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
         _photos.addAll(savedPhotos.reversed);
         _isLoading = false;
       });
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error loading photos: $e');
       setState(() => _isLoading = false);
     }
@@ -53,7 +53,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
         _photosBox = await Hive.openBox<TaggedPhoto>(_boxName);
       }
       await _photosBox!.add(photo);
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error saving photo: $e');
     }
   }
@@ -71,7 +71,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Photo deleted')),
       );
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error deleting photo: $e');
     }
   }
@@ -100,8 +100,8 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       final file = File(filePath);
       if (!await file.exists()) return;
       final bytes = await file.readAsBytes();
-      final existingTags = await readExifFromBytes(bytes);
-      try {} catch (e) {
+
+      try {} on Exception catch (e) {
       debugPrint('GPS EXIF writing not available in this version');
     }
     try {} catch (e) {
@@ -112,22 +112,14 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
     }
       
       await file.writeAsBytes(bytes);
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error writing EXIF data: $e');
     }
   }
 
-  String _formatGpsCoordinate(double coordinate) {
-    final degrees = coordinate.floor();
-    final minutesDouble = (coordinate - degrees) * 60;
-    final minutes = minutesDouble.floor();
-    final seconds = ((minutesDouble - minutes) * 60).toStringAsFixed(2);
-    return '$degrees/1,$minutes/1,$seconds/100';
-  }
 
-  String _formatGpsAltitude(double altitude) {
-    return '${altitude.toStringAsFixed(2)}/1';
-  }
+
+
 
   Future<void> _takePhoto() async {
     final gps = context.read<GpsService>();
@@ -193,7 +185,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       return;
     }
     if (!mounted) return;
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => _PhotoViewerScreen(photo: photo),
       ),
@@ -216,7 +208,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
         text:
             'GPS Location: ${photo.latitude?.toStringAsFixed(6)}, ${photo.longitude?.toStringAsFixed(6)}\nAltitude: ${photo.altitude?.toStringAsFixed(1)}m\nBearing: ${photo.bearing.toStringAsFixed(1)}°',
       );
-    } catch (e) {
+    } on Exception catch (e) {
       debugPrint('Error sharing photo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

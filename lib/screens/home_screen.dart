@@ -8,7 +8,7 @@ import '../providers/theme_provider.dart';
 import '../services/gps_service.dart';
 import '../widgets/compass_dial.dart';
 import '../widgets/glass_container.dart';
-import '../widgets/premium_widgets.dart';
+
 import '../utils/geo_utils.dart';
 import '../utils/app_constants.dart';
 import 'waypoint_manager_screen.dart';

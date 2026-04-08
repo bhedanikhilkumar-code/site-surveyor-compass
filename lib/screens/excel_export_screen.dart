@@ -5,8 +5,8 @@ import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
-import '../models/waypoint_model.dart';
-import '../models/track_model.dart';
+
+
 import '../services/api_waypoint_service.dart';
 import '../services/track_service.dart';
 import '../services/gps_service.dart';
@@ -120,7 +120,7 @@ class _ExcelExportScreenState extends State<ExcelExportScreen> {
         DoubleCellValue(wp.longitude),
         DoubleCellValue(wp.altitude),
         DoubleCellValue(wp.bearing),
-        TextCellValue(wp.notes ?? ''),
+        TextCellValue(wp.notes),
         TextCellValue(wp.createdAt.toString()),
         TextCellValue(wp.updatedAt.toString()),
       ]);
@@ -152,7 +152,7 @@ class _ExcelExportScreenState extends State<ExcelExportScreen> {
           IntCellValue(i + 1),
           DoubleCellValue(point.latitude),
           DoubleCellValue(point.longitude),
-          DoubleCellValue(point.altitude ?? 0),
+          DoubleCellValue(point.altitude),
           TextCellValue(point.timestamp.toString()),
           DoubleCellValue(point.speed ?? 0),
           DoubleCellValue(point.accuracy ?? 0),

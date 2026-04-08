@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
+
+import '../models/waypoint_model.dart';
+import '../services/api_waypoint_service.dart';
 
 class CogoCalculationsScreen extends StatefulWidget {
   const CogoCalculationsScreen({Key? key}) : super(key: key);
@@ -308,11 +312,30 @@ class _ForwardCalculationTabState extends State<ForwardCalculationTab> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: Create waypoint from result
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Waypoint creation not implemented yet')),
-                      );
+                    onPressed: () async {
+                      if (_resultLat == null || _resultLng == null) return;
+                      try {
+                        final apiService = Provider.of<ApiWaypointService>(context, listen: false);
+                        await apiService.createWaypoint(
+                          name: 'Calculated Point',
+                          latitude: _resultLat!,
+                          longitude: _resultLng!,
+                          altitude: 0,
+                          bearing: 0,
+                          notes: 'Created from COGO calculation',
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Waypoint created successfully')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to create waypoint: $e')),
+                          );
+                        }
+                      }
                     },
                     child: const Text('Create Waypoint'),
                   ),

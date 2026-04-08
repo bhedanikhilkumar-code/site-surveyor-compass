@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../services/gps_service.dart';
-import '../utils/geo_utils.dart';
+
 
 class BearingLineScreen extends StatefulWidget {
   const BearingLineScreen({Key? key}) : super(key: key);
@@ -89,7 +89,6 @@ class _BearingLineScreenState extends State<BearingLineScreen> {
     final R = 6371000.0;
     final bearing = bearingDeg * pi / 180;
     final lat1 = lat * pi / 180;
-    final lng1 = lng * pi / 180;
     final lat2 = asin(sin(lat1) * cos(distM / R) + cos(lat1) * sin(distM / R) * cos(bearing));
     return lat2 * 180 / pi;
   }
