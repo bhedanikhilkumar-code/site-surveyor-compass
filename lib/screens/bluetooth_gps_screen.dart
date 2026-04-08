@@ -98,5 +98,6 @@ class _BluetoothGpsScreenState extends State<BluetoothGpsScreen> {
         ],
       ),
     );
-  }
+   }
 }
+
