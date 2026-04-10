@@ -286,6 +286,22 @@ class GeoUtils {
     return '${degrees.toString().padLeft(2, '0')}°${minutes.toString().padLeft(2, '0')}\'${seconds.toStringAsFixed(2).padLeft(5, '0')}"$direction';
   }
 
+  /// Calculate the angle at a vertex between three points.
+  /// Returns the angle in degrees at point2.
+  static double calculateAngleAtVertex(
+    Map<String, double> point1,
+    Map<String, double> point2,
+    Map<String, double> point3,
+  ) {
+    final bearing1 = calculateBearing(point2['lat']!, point2['lon']!, point1['lat']!, point1['lon']!);
+    final bearing2 = calculateBearing(point2['lat']!, point2['lon']!, point3['lat']!, point3['lon']!);
+
+    double angle = bearing2 - bearing1;
+    if (angle < 0) angle += 360.0;
+
+    return angle;
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
