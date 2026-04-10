@@ -435,4 +435,10 @@ class GeoUtils {
     final index = ((bearing + 11.25) / 22.5).floor() % 16;
     return directions[index];
   }
+
+  /// Calculate the area of a circle given its radius.
+  /// Returns area in square meters.
+  static double calculateCircleArea(double radius) {
+    return pi * radius * radius;
+  }
 }
