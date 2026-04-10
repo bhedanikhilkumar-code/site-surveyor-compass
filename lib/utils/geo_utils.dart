@@ -201,6 +201,32 @@ class GeoUtils {
     return {'lat': cx, 'lon': cy};
   }
 
+  /// Calculate the midpoint between two geographic points.
+  /// Returns a Map with 'lat' and 'lon' keys.
+  /// Note: This is an approximate calculation for small distances.
+  static Map<String, double> calculateMidpoint(
+    Map<String, double> point1,
+    Map<String, double> point2,
+  ) {
+    final lat1 = _toRadians(point1['lat']!);
+    final lon1 = _toRadians(point1['lon']!);
+    final lat2 = _toRadians(point2['lat']!);
+    final lon2 = _toRadians(point2['lon']!);
+
+    final dLon = lon2 - lon1;
+
+    final bx = cos(lat2) * cos(dLon);
+    final by = cos(lat2) * sin(dLon);
+
+    final lat3 = atan2(sin(lat1) + sin(lat2), sqrt((cos(lat1) + bx) * (cos(lat1) + bx) + by * by));
+    final lon3 = lon1 + atan2(by, cos(lat1) + bx);
+
+    return {
+      'lat': _toDegrees(lat3),
+      'lon': _toDegrees(lon3),
+    };
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
