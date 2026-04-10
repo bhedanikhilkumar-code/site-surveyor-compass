@@ -477,4 +477,22 @@ class GeoUtils {
     final apothem = sideLength / (2 * tan(pi / numSides));
     return (perimeter * apothem) / 2;
   }
+
+  /// Calculate the area of a parallelogram given base and height.
+  /// Returns area in square meters.
+  static double calculateParallelogramArea(double base, double height) {
+    return base * height;
+  }
+
+  /// Calculate the area of a rhombus given two diagonals.
+  /// Returns area in square meters.
+  static double calculateRhombusArea(double diagonal1, double diagonal2) {
+    return (diagonal1 * diagonal2) / 2;
+  }
+
+  /// Calculate the area of an ellipse given major and minor axes.
+  /// Returns area in square meters.
+  static double calculateEllipseArea(double majorAxis, double minorAxis) {
+    return pi * majorAxis * minorAxis;
+  }
 }
