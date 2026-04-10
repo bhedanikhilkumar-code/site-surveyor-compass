@@ -501,4 +501,10 @@ class GeoUtils {
   static double calculateAnnulusArea(double outerRadius, double innerRadius) {
     return pi * (outerRadius * outerRadius - innerRadius * innerRadius);
   }
+
+  /// Calculate the area of a spherical cap given radius and height.
+  /// Returns area in square meters.
+  static double calculateSphericalCapArea(double radius, double height) {
+    return 2 * pi * radius * height;
+  }
 }
