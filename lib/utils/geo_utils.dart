@@ -441,4 +441,10 @@ class GeoUtils {
   static double calculateCircleArea(double radius) {
     return pi * radius * radius;
   }
+
+  /// Calculate the circumference of a circle given its radius.
+  /// Returns circumference in meters.
+  static double calculateCircleCircumference(double radius) {
+    return 2 * pi * radius;
+  }
 }
