@@ -242,6 +242,37 @@ class GeoUtils {
     return area * 111319.5 * 111319.5 * cos(_toRadians((point1['lat']! + point2['lat']! + point3['lat']!) / 3));
   }
 
+  /// Calculate the intersection point of two lines defined by two points each.
+  /// Returns the intersection point as Map<String, double> with 'lat' and 'lon', or null if parallel.
+  static Map<String, double>? calculateLineIntersection(
+    Map<String, double> line1Point1,
+    Map<String, double> line1Point2,
+    Map<String, double> line2Point1,
+    Map<String, double> line2Point2,
+  ) {
+    final x1 = line1Point1['lon']!;
+    final y1 = line1Point1['lat']!;
+    final x2 = line1Point2['lon']!;
+    final y2 = line1Point2['lat']!;
+    final x3 = line2Point1['lon']!;
+    final y3 = line2Point1['lat']!;
+    final x4 = line2Point2['lon']!;
+    final y4 = line2Point2['lat']!;
+
+    final denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (denom.abs() < 1e-9) return null; // Parallel or coincident
+
+    final t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    final u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+      final ix = x1 + t * (x2 - x1);
+      final iy = y1 + t * (y2 - y1);
+      return {'lat': iy, 'lon': ix};
+    }
+    return null; // Intersection not within line segments
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
