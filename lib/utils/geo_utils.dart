@@ -325,6 +325,31 @@ class GeoUtils {
     };
   }
 
+  /// Calculate the perpendicular distance from a point to a line defined by two points.
+  /// Returns the distance in meters.
+  static double calculatePerpendicularDistanceToLine(
+    Map<String, double> point,
+    Map<String, double> linePoint1,
+    Map<String, double> linePoint2,
+  ) {
+    final x0 = point['lon']!;
+    final y0 = point['lat']!;
+    final x1 = linePoint1['lon']!;
+    final y1 = linePoint1['lat']!;
+    final x2 = linePoint2['lon']!;
+    final y2 = linePoint2['lat']!;
+
+    final numerator = ((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1).abs();
+    final denominator = sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
+
+    if (denominator == 0) return 0.0; // Points are the same
+
+    final distance = numerator / denominator;
+
+    // Approximate meters conversion
+    return distance * 111319.5 * cos(_toRadians(y0));
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
