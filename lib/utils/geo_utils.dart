@@ -447,4 +447,11 @@ class GeoUtils {
   static double calculateCircleCircumference(double radius) {
     return 2 * pi * radius;
   }
+
+  /// Calculate the area of a circular sector given radius and angle in degrees.
+  /// Returns area in square meters.
+  static double calculateSectorArea(double radius, double angleDegrees) {
+    final angleRadians = _toRadians(angleDegrees);
+    return (angleRadians / (2 * pi)) * calculateCircleArea(radius);
+  }
 }
