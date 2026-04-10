@@ -123,6 +123,84 @@ class GeoUtils {
   static double _toRadians(double degrees) => degrees * pi / 180;
   static double _toDegrees(double radians) => radians * 180 / pi;
 
+  /// Calculate the area of a polygon using the shoelace formula.
+  /// Points should be in order (clockwise or counterclockwise).
+  /// Returns area in square meters.
+  /// Note: This assumes planar coordinates; for geographic coordinates,
+  /// consider projecting to UTM or using geodesic calculations.
+  static double calculatePolygonArea(List<Map<String, double>> points) {
+    if (points.length < 3) return 0.0;
+
+    double area = 0.0;
+    for (int i = 0; i < points.length; i++) {
+      final j = (i + 1) % points.length;
+      area += points[i]['lat']! * points[j]['lon']! - points[j]['lat']! * points[i]['lon']!;
+    }
+    return (area.abs() / 2) * 111319.5 * 111319.5 * cos(_toRadians(points[0]['lat']!)); // Approximate conversion to meters
+  }
+
+  /// Check if a point is inside a polygon using ray casting algorithm.
+  /// Points should be in order (clockwise or counterclockwise).
+  static bool isPointInsidePolygon(
+    List<Map<String, double>> polygon,
+    Map<String, double> point,
+  ) {
+    int intersections = 0;
+    final numVertices = polygon.length;
+
+    for (int i = 0, j = numVertices - 1; i < numVertices; j = i++) {
+      final vertex1 = polygon[i];
+      final vertex2 = polygon[j];
+
+      if (((vertex1['lat']! > point['lat']!) != (vertex2['lat']! > point['lat']!)) &&
+          (point['lon']! < (vertex2['lon']! - vertex1['lon']!) * (point['lat']! - vertex1['lat']!) / (vertex2['lat']! - vertex1['lat']!) + vertex1['lon']!)) {
+        intersections++;
+      }
+    }
+
+    return intersections % 2 == 1;
+  }
+
+  /// Calculate the perimeter of a polygon.
+  /// Returns perimeter in meters.
+  static double calculatePolygonPerimeter(List<Map<String, double>> points) {
+    if (points.length < 3) return 0.0;
+
+    double perimeter = 0.0;
+    for (int i = 0; i < points.length; i++) {
+      final j = (i + 1) % points.length;
+      perimeter += calculateDistance(
+        points[i]['lat']!, points[i]['lon']!,
+        points[j]['lat']!, points[j]['lon']!,
+      );
+    }
+    return perimeter;
+  }
+
+  /// Calculate the centroid of a polygon.
+  /// Returns a Map with 'lat' and 'lon' keys.
+  static Map<String, double> calculatePolygonCentroid(List<Map<String, double>> points) {
+    if (points.length < 3) return {'lat': 0.0, 'lon': 0.0};
+
+    double area = 0.0;
+    double cx = 0.0;
+    double cy = 0.0;
+
+    for (int i = 0; i < points.length; i++) {
+      final j = (i + 1) % points.length;
+      final cross = points[i]['lat']! * points[j]['lon']! - points[j]['lat']! * points[i]['lon']!;
+      area += cross;
+      cx += (points[i]['lat']! + points[j]['lat']!) * cross;
+      cy += (points[i]['lon']! + points[j]['lon']!) * cross;
+    }
+
+    area /= 2;
+    cx /= (6 * area);
+    cy /= (6 * area);
+
+    return {'lat': cx, 'lon': cy};
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
