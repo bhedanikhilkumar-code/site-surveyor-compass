@@ -495,4 +495,10 @@ class GeoUtils {
   static double calculateEllipseArea(double majorAxis, double minorAxis) {
     return pi * majorAxis * minorAxis;
   }
+
+  /// Calculate the area of an annulus (ring) given outer and inner radii.
+  /// Returns area in square meters.
+  static double calculateAnnulusArea(double outerRadius, double innerRadius) {
+    return pi * (outerRadius * outerRadius - innerRadius * innerRadius);
+  }
 }
