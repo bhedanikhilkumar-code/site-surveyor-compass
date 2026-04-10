@@ -273,6 +273,19 @@ class GeoUtils {
     return null; // Intersection not within line segments
   }
 
+  /// Format a coordinate (latitude or longitude) to DMS (Degrees, Minutes, Seconds) string.
+  static String formatCoordinateDMS(double coordinate, bool isLatitude) {
+    final direction = isLatitude ? (coordinate >= 0 ? 'N' : 'S') : (coordinate >= 0 ? 'E' : 'W');
+    final absCoord = coordinate.abs();
+
+    final degrees = absCoord.floor();
+    final minutesFloat = (absCoord - degrees) * 60;
+    final minutes = minutesFloat.floor();
+    final seconds = (minutesFloat - minutes) * 60;
+
+    return '${degrees.toString().padLeft(2, '0')}°${minutes.toString().padLeft(2, '0')}\'${seconds.toStringAsFixed(2).padLeft(5, '0')}"$direction';
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
