@@ -302,6 +302,29 @@ class GeoUtils {
     return angle;
   }
 
+  /// Calculate the coordinates of a point given a start point, bearing, and distance.
+  /// Returns a Map with 'lat' and 'lon' keys.
+  static Map<String, double> calculatePointFromBearingAndDistance(
+    Map<String, double> startPoint,
+    double bearing,
+    double distance,
+  ) {
+    final lat1 = _toRadians(startPoint['lat']!);
+    final lon1 = _toRadians(startPoint['lon']!);
+    final bearingRad = _toRadians(bearing);
+
+    // Earth's radius in meters
+    const R = 6371000.0;
+
+    final lat2 = asin(sin(lat1) * cos(distance / R) + cos(lat1) * sin(distance / R) * cos(bearingRad));
+    final lon2 = lon1 + atan2(sin(bearingRad) * sin(distance / R) * cos(lat1), cos(distance / R) - sin(lat1) * sin(lat2));
+
+    return {
+      'lat': _toDegrees(lat2),
+      'lon': _toDegrees(lon2),
+    };
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
