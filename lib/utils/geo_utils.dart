@@ -227,6 +227,21 @@ class GeoUtils {
     };
   }
 
+  /// Calculate the area of a triangle given three points.
+  /// Returns area in square meters.
+  static double calculateTriangleArea(
+    Map<String, double> point1,
+    Map<String, double> point2,
+    Map<String, double> point3,
+  ) {
+    // Using shoelace formula
+    final area = 0.5 * ((point1['lat']! * (point2['lon']! - point3['lon']!)) +
+        (point2['lat']! * (point3['lon']! - point1['lon']!)) +
+        (point3['lat']! * (point1['lon']! - point2['lon']!))).abs();
+    // Approximate conversion to meters (rough for small areas)
+    return area * 111319.5 * 111319.5 * cos(_toRadians((point1['lat']! + point2['lat']! + point3['lat']!) / 3));
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
