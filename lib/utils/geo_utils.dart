@@ -463,4 +463,10 @@ class GeoUtils {
     final triangleArea = (radius * radius * angleRadians) / 2;
     return sectorArea - triangleArea;
   }
+
+  /// Calculate the area of a trapezoid given two parallel sides and height.
+  /// Returns area in square meters.
+  static double calculateTrapezoidArea(double parallelSide1, double parallelSide2, double height) {
+    return ((parallelSide1 + parallelSide2) / 2) * height;
+  }
 }
