@@ -454,4 +454,13 @@ class GeoUtils {
     final angleRadians = _toRadians(angleDegrees);
     return (angleRadians / (2 * pi)) * calculateCircleArea(radius);
   }
+
+  /// Calculate the area of a circular segment given radius and angle in degrees.
+  /// Returns area in square meters.
+  static double calculateSegmentArea(double radius, double angleDegrees) {
+    final angleRadians = _toRadians(angleDegrees);
+    final sectorArea = calculateSectorArea(radius, angleDegrees);
+    final triangleArea = (radius * radius * angleRadians) / 2;
+    return sectorArea - triangleArea;
+  }
 }
