@@ -372,6 +372,60 @@ class GeoUtils {
     return area * 111319.5 * 111319.5 * cos(_toRadians(avgLat));
   }
 
+  /// Generate a grid of points around a center point.
+  /// Returns a list of Map<String, double> with 'lat' and 'lon'.
+  static List<Map<String, double>> generateGridPoints(
+    Map<String, double> center,
+    int numPointsX,
+    int numPointsY,
+    double spacingMeters,
+  ) {
+    final List<Map<String, double>> points = [];
+    final halfX = (numPointsX - 1) / 2;
+    final halfY = (numPointsY - 1) / 2;
+
+    for (int i = 0; i < numPointsX; i++) {
+      for (int j = 0; j < numPointsY; j++) {
+        final deltaX = (i - halfX) * spacingMeters;
+        final deltaY = (j - halfY) * spacingMeters;
+
+        // Approximate conversion to lat/lon (rough for small distances)
+        final deltaLat = deltaY / 111319.5;
+        final deltaLon = deltaX / (111319.5 * cos(_toRadians(center['lat']!)));
+
+        points.add({
+          'lat': center['lat']! + deltaLat,
+          'lon': center['lon']! + deltaLon,
+        });
+      }
+    }
+    return points;
+  }
+
+  /// Parse a coordinate from DMS (Degrees, Minutes, Seconds) string to decimal degrees.
+  /// Input format: "12°34'56\"N" or "12°34'56.7\"S"
+  static double? parseCoordinateDMS(String dmsString) {
+    try {
+      final parts = dmsString.split(RegExp('[°\'"]'));
+      if (parts.length != 4) return null;
+
+      final degrees = int.parse(parts[0]);
+      final minutes = int.parse(parts[1]);
+      final seconds = double.parse(parts[2]);
+      final direction = parts[3];
+
+      double decimal = degrees + minutes / 60.0 + seconds / 3600.0;
+
+      if (direction == 'S' || direction == 'W') {
+        decimal = -decimal;
+      }
+
+      return decimal;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
