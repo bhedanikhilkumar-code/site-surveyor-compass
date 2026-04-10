@@ -350,6 +350,28 @@ class GeoUtils {
     return distance * 111319.5 * cos(_toRadians(y0));
   }
 
+  /// Calculate the area of a quadrilateral given four points.
+  /// Points should be in order (clockwise or counterclockwise).
+  /// Returns area in square meters.
+  static double calculateQuadrilateralArea(
+    Map<String, double> point1,
+    Map<String, double> point2,
+    Map<String, double> point3,
+    Map<String, double> point4,
+  ) {
+    // Using shoelace formula for quadrilateral
+    final points = [point1, point2, point3, point4, point1]; // Close the loop
+    double area = 0.0;
+    for (int i = 0; i < 4; i++) {
+      area += points[i]['lat']! * points[i + 1]['lon']! - points[i + 1]['lat']! * points[i]['lon']!;
+    }
+    area = (area.abs() / 2);
+
+    // Approximate conversion to meters
+    final avgLat = (point1['lat']! + point2['lat']! + point3['lat']! + point4['lat']!) / 4;
+    return area * 111319.5 * 111319.5 * cos(_toRadians(avgLat));
+  }
+
   /// Get compass direction string from bearing.
   static String bearingToCompass(double bearing) {
     const directions = [
