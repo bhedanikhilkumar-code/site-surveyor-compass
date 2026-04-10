@@ -469,4 +469,12 @@ class GeoUtils {
   static double calculateTrapezoidArea(double parallelSide1, double parallelSide2, double height) {
     return ((parallelSide1 + parallelSide2) / 2) * height;
   }
+
+  /// Calculate the area of a regular polygon given number of sides and side length.
+  /// Returns area in square meters.
+  static double calculateRegularPolygonArea(int numSides, double sideLength) {
+    final perimeter = numSides * sideLength;
+    final apothem = sideLength / (2 * tan(pi / numSides));
+    return (perimeter * apothem) / 2;
+  }
 }
