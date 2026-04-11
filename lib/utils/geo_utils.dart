@@ -508,6 +508,23 @@ class GeoUtils {
     return 2 * pi * radius * height;
   }
 
+  /// Calculate the distance between two GPS coordinates using the Haversine formula.
+  /// Returns distance in meters.
+  static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000.0; // Earth's radius in meters
+
+    final double dLat = (lat2 - lat1) * pi / 180;
+    final double dLon = (lon2 - lon1) * pi / 180;
+
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
+        sin(dLon / 2) * sin(dLon / 2);
+
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
   /// Get UTM zone information for given latitude and longitude.
   /// Returns a Map with 'zoneNumber' (int) and 'zoneLetter' (String).
   static Map<String, dynamic> getUTMZone(double latitude, double longitude) {
