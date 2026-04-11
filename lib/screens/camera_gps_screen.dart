@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../services/gps_service.dart';
 import '../providers/compass_provider.dart';
 import '../utils/geo_utils.dart';
@@ -41,7 +42,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
         _isLoading = false;
       });
     } on Exception catch (e) {
-      debugPrint('Error loading photos: $e');
+      // debugPrint('Error loading photos: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -53,7 +54,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       }
       await _photosBox!.add(photo);
     } on Exception catch (e) {
-      debugPrint('Error saving photo: $e');
+      // debugPrint('Error saving photo: $e');
     }
   }
 
@@ -71,7 +72,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
         const SnackBar(content: Text('Photo deleted')),
       );
     } on Exception catch (e) {
-      debugPrint('Error deleting photo: $e');
+      // debugPrint('Error deleting photo: $e');
     }
   }
 
@@ -88,7 +89,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       await sourceFile.copy(newPath);
       return newPath;
     } catch (e) {
-      debugPrint('Error copying image: $e');
+      // debugPrint('Error copying image: $e');
       return null;
     }
   }
@@ -101,18 +102,18 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
       final bytes = await file.readAsBytes();
 
       try {} on Exception catch (e) {
-      debugPrint('GPS EXIF writing not available in this version');
+      // GPS EXIF writing not available in this version
     }
     try {} catch (e) {
-      debugPrint('GPS EXIF writing not available in this version');
+      // GPS EXIF writing not available in this version
     }
     try {} catch (e) {
-      debugPrint('GPS EXIF writing not available in this version');
+      // GPS EXIF writing not available in this version
     }
-      
+
       await file.writeAsBytes(bytes);
     } on Exception catch (e) {
-      debugPrint('Error writing EXIF data: $e');
+      // debugPrint('Error writing EXIF data: $e');
     }
   }
 
@@ -208,7 +209,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
             'GPS Location: ${photo.latitude?.toStringAsFixed(6)}, ${photo.longitude?.toStringAsFixed(6)}\nAltitude: ${photo.altitude?.toStringAsFixed(1)}m\nBearing: ${photo.bearing.toStringAsFixed(1)}°',
       );
     } on Exception catch (e) {
-      debugPrint('Error sharing photo: $e');
+      // debugPrint('Error sharing photo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error sharing photo: $e')),
@@ -482,7 +483,7 @@ class _CameraGpsScreenState extends State<CameraGpsScreen> {
           );
         }
       } catch (e) {
-        debugPrint('Error deleting all photos: $e');
+        // debugPrint('Error deleting all photos: $e');
       }
     }
   }
@@ -515,7 +516,7 @@ class _PhotoViewerScreen extends StatelessWidget {
                       'GPS Location: ${photo.latitude?.toStringAsFixed(6)}, ${photo.longitude?.toStringAsFixed(6)}\nAltitude: ${photo.altitude?.toStringAsFixed(1)}m\nBearing: ${photo.bearing.toStringAsFixed(1)}°',
                 );
               } catch (e) {
-                debugPrint('Error sharing: $e');
+                // debugPrint('Error sharing: $e');
               }
             },
           ),

@@ -28,10 +28,10 @@ void main() async {
     try {
       await Firebase.initializeApp();
      } on Exception catch (e) {
-       debugPrint('Firebase initialization failed: $e - Using offline mode');
+       // debugPrint('Firebase initialization failed: $e - Using offline mode');
      }
    } on Exception catch (e) {
-     debugPrint('Initialization error: $e');
+      // debugPrint('Initialization error: $e');
    }
   
   try {
@@ -65,7 +65,7 @@ void main() async {
       themeProvider: themeProvider,
     ));
    } on Exception catch (e) {
-     debugPrint('App initialization error: $e');
+      // debugPrint('App initialization error: $e');
    }
 }
 
@@ -89,7 +89,7 @@ Future<void> _requestPermissions() async {
       // Sensor permission granted - Compass enabled
     }
    } on Exception catch (e) {
-     debugPrint('Permission request error: $e - Continue anyway - app can work with limited functionality');
+      // debugPrint('Permission request error: $e - Continue anyway - app can work with limited functionality');
    }
 }
 

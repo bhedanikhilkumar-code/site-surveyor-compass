@@ -185,18 +185,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       '±${provider.accuracy.toStringAsFixed(0)}m',
                       style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
-                  if (provider.calibrationProgress < 100) ...[
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        value: provider.calibrationProgress / 100,
-                        color: Colors.blue,
-                      ),
-                    ),
-                  ],
+                   if (provider.calibrationProgress < 100) ...[
+                     const SizedBox(width: 12),
+                     Column(
+                       mainAxisSize: MainAxisSize.min,
+                       children: [
+                         Text(
+                           'Calibrating... Rotate in figure-8',
+                           style: TextStyle(fontSize: 12, color: Colors.blue),
+                         ),
+                         SizedBox(
+                           width: 20,
+                           height: 20,
+                           child: CircularProgressIndicator(
+                             strokeWidth: 2,
+                             value: provider.calibrationProgress / 100,
+                             color: Colors.blue,
+                           ),
+                         ),
+                       ],
+                     ),
+                   ],
                 ],
               ),
             ],

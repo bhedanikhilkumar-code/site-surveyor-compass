@@ -21,24 +21,24 @@ class ThemeProvider extends ChangeNotifier {
 
   // Text Theme
   static final TextTheme textTheme = TextTheme(
-    headlineLarge: GoogleFonts.plusJakartaSans(
+    headlineLarge: GoogleFonts.robotoSlab(
       fontSize: 32,
       fontWeight: FontWeight.w700,
       height: 1.25,
       letterSpacing: -0.5,
     ),
-    headlineMedium: GoogleFonts.plusJakartaSans(
+    headlineMedium: GoogleFonts.robotoSlab(
       fontSize: 24,
       fontWeight: FontWeight.w600,
       height: 1.33,
       letterSpacing: -0.25,
     ),
-    bodyLarge: GoogleFonts.plusJakartaSans(
+    bodyLarge: GoogleFonts.inter(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       height: 1.5,
     ),
-    bodySmall: GoogleFonts.plusJakartaSans(
+    bodySmall: GoogleFonts.inter(
       fontSize: 14,
       fontWeight: FontWeight.w400,
       height: 1.43,

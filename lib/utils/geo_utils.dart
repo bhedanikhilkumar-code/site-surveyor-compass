@@ -507,4 +507,78 @@ class GeoUtils {
   static double calculateSphericalCapArea(double radius, double height) {
     return 2 * pi * radius * height;
   }
+
+  /// Get UTM zone information for given latitude and longitude.
+  /// Returns a Map with 'zoneNumber' (int) and 'zoneLetter' (String).
+  static Map<String, dynamic> getUTMZone(double latitude, double longitude) {
+    // Calculate zone number
+    int zoneNumber = ((longitude + 180) / 6).floor() + 1;
+
+    // Special cases for Norway and Svalbard
+    if (latitude >= 56.0 && latitude < 64.0 && longitude >= 3.0 && longitude < 12.0) {
+      zoneNumber = 32;
+    }
+    if (latitude >= 72.0 && latitude < 84.0) {
+      if (longitude >= 0.0 && longitude < 9.0) {
+        zoneNumber = 31;
+      } else if (longitude >= 9.0 && longitude < 21.0) {
+        zoneNumber = 33;
+      } else if (longitude >= 21.0 && longitude < 33.0) {
+        zoneNumber = 35;
+      } else if (longitude >= 33.0 && longitude < 42.0) {
+        zoneNumber = 37;
+      }
+    }
+
+    // Calculate zone letter
+    String zoneLetter;
+    if (latitude >= -80.0 && latitude < -72.0) {
+      zoneLetter = 'C';
+    } else if (latitude >= -72.0 && latitude < -64.0) {
+      zoneLetter = 'D';
+    } else if (latitude >= -64.0 && latitude < -56.0) {
+      zoneLetter = 'E';
+    } else if (latitude >= -56.0 && latitude < -48.0) {
+      zoneLetter = 'F';
+    } else if (latitude >= -48.0 && latitude < -40.0) {
+      zoneLetter = 'G';
+    } else if (latitude >= -40.0 && latitude < -32.0) {
+      zoneLetter = 'H';
+    } else if (latitude >= -32.0 && latitude < -24.0) {
+      zoneLetter = 'J';
+    } else if (latitude >= -24.0 && latitude < -16.0) {
+      zoneLetter = 'K';
+    } else if (latitude >= -16.0 && latitude < -8.0) {
+      zoneLetter = 'L';
+    } else if (latitude >= -8.0 && latitude < 0.0) {
+      zoneLetter = 'M';
+    } else if (latitude >= 0.0 && latitude < 8.0) {
+      zoneLetter = 'N';
+    } else if (latitude >= 8.0 && latitude < 16.0) {
+      zoneLetter = 'P';
+    } else if (latitude >= 16.0 && latitude < 24.0) {
+      zoneLetter = 'Q';
+    } else if (latitude >= 24.0 && latitude < 32.0) {
+      zoneLetter = 'R';
+    } else if (latitude >= 32.0 && latitude < 40.0) {
+      zoneLetter = 'S';
+    } else if (latitude >= 40.0 && latitude < 48.0) {
+      zoneLetter = 'T';
+    } else if (latitude >= 48.0 && latitude < 56.0) {
+      zoneLetter = 'U';
+    } else if (latitude >= 56.0 && latitude < 64.0) {
+      zoneLetter = 'V';
+    } else if (latitude >= 64.0 && latitude < 72.0) {
+      zoneLetter = 'W';
+    } else if (latitude >= 72.0 && latitude < 80.0) {
+      zoneLetter = 'X';
+    } else {
+      zoneLetter = ''; // Invalid latitude
+    }
+
+    return {
+      'zoneNumber': zoneNumber,
+      'zoneLetter': zoneLetter,
+    };
+  }
 }

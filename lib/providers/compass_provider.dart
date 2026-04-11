@@ -18,6 +18,8 @@ class CompassProvider extends ChangeNotifier {
   bool _hasGpsLock = false;
   bool _magneticDisturbance = false;
   double _magneticFieldStrength = 0.0;
+  double _gpsHeading = 0.0;
+  bool _gpsHeadingValid = false;
 
   // OPTIMIZED: Balanced for accuracy and battery/thermal efficiency
   static const double _sensorAlpha = 0.15;        // Lower for better noise filtering
@@ -42,6 +44,15 @@ class CompassProvider extends ChangeNotifier {
   double _gyroHeading = 0;
   double _lastGyroTimestamp = 0;
   bool _gyroInitialized = false;
+
+  // Gyro zero-rate calibration
+  v.Vector3 _gyroBias = v.Vector3.zero();
+  int _gyroBiasSamples = 0;
+  static const int _gyroBiasSampleTarget = 200;
+  bool _isStationary = false;
+  double _stationaryThreshold = 0.5; // degrees per update
+  double _prevPitch = 0;
+  double _prevRoll = 0;
 
   // Kalman-like filter for bearing
   double _bearingEstimate = 0;
@@ -129,14 +140,29 @@ class CompassProvider extends ChangeNotifier {
           if (event.x.isNaN || event.y.isNaN || event.z.isNaN)
             return;
 
+          // Gyro bias calibration during stationary periods
+          if (_isStationary && _gyroBiasSamples < _gyroBiasSampleTarget) {
+            _gyroBias.x += event.x;
+            _gyroBias.y += event.y;
+            _gyroBias.z += event.z;
+            _gyroBiasSamples++;
+            if (_gyroBiasSamples == _gyroBiasSampleTarget) {
+              _gyroBias.x /= _gyroBiasSampleTarget;
+              _gyroBias.y /= _gyroBiasSampleTarget;
+              _gyroBias.z /= _gyroBiasSampleTarget;
+            }
+          }
+
           final now = DateTime.now().microsecondsSinceEpoch / 1000000.0;
           if (_lastGyroTimestamp > 0) {
             final dt = now - _lastGyroTimestamp;
             if (dt > 0.005 && dt < 0.1) { // Valid time step: 5ms to 100ms
-              // FIX: Proper gyroscope integration with axis correction
+              // FIX: Proper gyroscope integration with axis correction and bias subtraction
               // Z-axis rotation gives heading change (positive = clockwise)
+              // Apply zero-rate bias correction
+              final correctedZ = event.z - _gyroBias.z;
               // Convert rad/s to degrees and integrate
-              final deltaHeading = event.z * dt * (180 / pi);
+              final deltaHeading = correctedZ * dt * (180 / pi);
 
               // Apply dead zone for noise reduction
               if (deltaHeading.abs() > 0.01) { // Ignore very small movements
@@ -227,6 +253,13 @@ class CompassProvider extends ChangeNotifier {
     // IMPROVED: More accurate pitch/roll using atan2
     _pitch = atan2(-y, sqrt(x * x + z * z)) * 180 / pi;
     _roll = atan2(x, sqrt(y * y + z * z)) * 180 / pi;
+
+    // Detect stationary state for gyro bias calibration
+    double pitchChange = (_pitch - _prevPitch).abs();
+    double rollChange = (_roll - _prevRoll).abs();
+    _isStationary = pitchChange < _stationaryThreshold && rollChange < _stationaryThreshold;
+    _prevPitch = _pitch;
+    _prevRoll = _roll;
   }
 
   void _calculateHeading() {
@@ -334,7 +367,16 @@ class CompassProvider extends ChangeNotifier {
   // FIX: Apply adaptive bearing smoothing
   final double smoothingFactor = _magneticDisturbance ? 0.3 : _bearingAlpha; // Less smoothing when disturbed
       _bearing = _bearing * (1 - smoothingFactor) + _bearingEstimate * smoothingFactor;
-      
+
+      // GPS heading fusion for long-term drift correction during movement
+      if (_gpsHeadingValid && _speed > 0.5) { // Moving at >0.5 m/s
+        double gpsDiff = ((_gpsHeading - _bearing + 540) % 360) - 180;
+        if (gpsDiff.abs() > 45) gpsDiff = gpsDiff.sign * 45; // Limit correction
+        const double gpsWeight = 0.1; // Small correction to avoid GPS noise
+        _bearing += gpsWeight * gpsDiff;
+        _bearing = ((_bearing % 360) + 360) % 360;
+      }
+
       // Ensure bearing stays in 0-360 range
       _bearing = (_bearing + 360) % 360;
     }
@@ -380,10 +422,16 @@ class CompassProvider extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
-  void updateGpsData({required double speed, required double accuracy, required bool hasLock}) {
+  void updateGpsData({required double speed, required double accuracy, required bool hasLock, double? heading}) {
     _speed = speed.isNaN ? 0.0 : speed;
     _accuracy = accuracy.isNaN ? 0.0 : accuracy;
     _hasGpsLock = hasLock;
+    if (heading != null && !heading.isNaN) {
+      _gpsHeading = heading;
+      _gpsHeadingValid = true;
+    } else {
+      _gpsHeadingValid = false;
+    }
   }
 
   // BATTERY OPTIMIZATION: Pause/resume sensor updates
@@ -402,6 +450,8 @@ class CompassProvider extends ChangeNotifier {
     _baselineFieldStrength = 0;
     _calibrationSamples = 0;
     _magneticDisturbance = false;
+    _gyroBias = v.Vector3.zero();
+    _gyroBiasSamples = 0;
     _safeNotifyListeners();
   }
 

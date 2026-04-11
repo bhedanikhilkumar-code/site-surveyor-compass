@@ -268,6 +268,7 @@ class GpsService extends ChangeNotifier {
               speed: speedKmh,
               accuracy: position.accuracy,
               hasLock: position.accuracy < 20, // IMPROVED: was 50 - tighter lock
+              heading: position.heading != -1 ? position.heading : null,
             );
             if (!position.altitude.isNaN) {
               _compassProvider!.updateLocation(
