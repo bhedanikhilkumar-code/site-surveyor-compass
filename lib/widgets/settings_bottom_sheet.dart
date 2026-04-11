@@ -30,17 +30,24 @@ import '../screens/language_settings_screen.dart';
 import '../screens/bluetooth_gps_screen.dart';
 import '../screens/settings_screen.dart';
 
-void showSettingsBottomSheet(BuildContext context) {
+void showSettingsBottomSheet(BuildContext context, VoidCallback onThemeToggle) {
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (context) => const SettingsBottomSheet(),
+    builder: (context) => SettingsBottomSheet(
+      onThemeToggle: onThemeToggle,
+    ),
   );
 }
 
 class SettingsBottomSheet extends StatelessWidget {
-  const SettingsBottomSheet({Key? key}) : super(key: key);
+  final VoidCallback onThemeToggle;
+
+  const SettingsBottomSheet({
+    Key? key,
+    required this.onThemeToggle,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +139,7 @@ class SettingsBottomSheet extends StatelessWidget {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const ImportExportScreen()));
                     }),
                     _settingsTile(Icons.brightness_6, 'Night Mode', 'Toggle dark/light theme', Colors.amber, () {
-                      context.read<ThemeProvider>().toggleTheme();
+                      onThemeToggle();
                       Navigator.pop(context);
                     }),
                     _settingsTile(Icons.height, 'Height Measure', 'Measure object height via angle', Colors.lightGreen, () {

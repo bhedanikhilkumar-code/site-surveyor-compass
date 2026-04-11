@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => showSettingsBottomSheet(context),
+            onPressed: () => showSettingsBottomSheet(context, () => context.read<ThemeProvider>().toggleTheme()),
           ),
         ],
       ),
@@ -673,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
       onTap: (index) {
         if (index == 4) {
-          showSettingsBottomSheet(context);
+          showSettingsBottomSheet(context, () => context.read<ThemeProvider>().toggleTheme());
         } else {
           setState(() => _selectedIndex = index);
         }
