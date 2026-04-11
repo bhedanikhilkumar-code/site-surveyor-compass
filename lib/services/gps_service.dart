@@ -20,8 +20,22 @@ class GpsService extends ChangeNotifier {
   double _latErrorEstimate = 2.0;
   double _lngErrorEstimate = 2.0;
   double _altErrorEstimate = 10.0;
+
+  // Static constants for magic numbers
   static const double _processNoise = 0.000005;   // Reduced process noise for smoother tracking
   static const double _altProcessNoise = 0.05;    // Reduced altitude process noise
+  static const double _metersPerDegreeLat = 111319.5; // Meters per degree latitude
+  static const double _minMeasurementNoise = 0.1; // Minimum noise floor for Kalman filter
+  static const double _maxCorrectionDegrees = 0.001; // Max 100m correction per update
+  static const double _altitudeNoiseMultiplier = 1.5; // Altitude error estimate multiplier
+  static const double _accuracyThreshold = 200.0; // Reject readings with accuracy > 200m
+  static const double _speedThresholdMs = 50.0; // Reject impossible speeds > 50 m/s
+  static const double _accuracyLockThreshold = 20.0; // GPS lock threshold for compass
+  static const int _addressThrottleMs = 30000; // 30 seconds throttle for address resolution
+  static const double _addressMinDistance = 0.001; // Minimum distance for address resolution
+  static const double _defaultDistanceFilter = 2.0; // Default distance filter in meters
+  static const double _notificationThresholdDegrees = 0.00001; // Minimum change to trigger notify
+  static const double _notificationThresholdAccuracy = 0.1; // Minimum accuracy change to trigger notify
 
   Position? get currentPosition => _currentPosition;
   bool get isListening => _isListening;
@@ -38,6 +52,11 @@ class GpsService extends ChangeNotifier {
   double _lastGoodLat = 0;
   double _lastGoodLng = 0;
 
+  // Track previous values for change detection
+  double? _previousLat;
+  double? _previousLng;
+  double? _previousAccuracy;
+
   void setCompassProvider(CompassProvider provider) {
     _compassProvider = provider;
   }
@@ -46,8 +65,6 @@ class GpsService extends ChangeNotifier {
   double _lastResolvedLat = 0;
   double _lastResolvedLng = 0;
   int _lastResolvedMs = 0;
-  static const int _addressThrottleMs = 30000;
-  static const double _addressMinDistance = 0.001;
 
   Future<void> _resolveAddress(double lat, double lng) async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -75,6 +92,8 @@ class GpsService extends ChangeNotifier {
           if (place.country != null && place.country!.isNotEmpty) place.country,
         ].join(', ');
       }
+      // Notify listeners when address is updated
+      notifyListeners();
     } catch (e) {
       _address = null;
     }
@@ -139,9 +158,9 @@ class GpsService extends ChangeNotifier {
         _smoothedLat = bestPosition.latitude;
         _smoothedLng = bestPosition.longitude;
         _smoothedAlt = bestPosition.altitude;
-        _latErrorEstimate = bestPosition.accuracy / 111319.5;
-        _lngErrorEstimate = bestPosition.accuracy / (111319.5 * cos(bestPosition.latitude * pi / 180));
-        _altErrorEstimate = bestPosition.accuracy * 1.5;
+        _latErrorEstimate = bestPosition.accuracy / _metersPerDegreeLat;
+        _lngErrorEstimate = bestPosition.accuracy / (_metersPerDegreeLat * cos(bestPosition.latitude * pi / 180));
+        _altErrorEstimate = bestPosition.accuracy * _altitudeNoiseMultiplier;
         _lastGoodLat = bestPosition.latitude;
         _lastGoodLng = bestPosition.longitude;
         _consecutiveGoodReads = 1;
@@ -184,7 +203,7 @@ class GpsService extends ChangeNotifier {
           // IMPROVED: Better validation
           if (position.latitude.isNaN || position.longitude.isNaN) return;
           if (position.latitude.abs() > 90 || position.longitude.abs() > 180) return;
-          if (position.accuracy > 200) return; // IMPROVED: was 5000 - reject bad readings
+          if (position.accuracy > _accuracyThreshold) return; // Reject bad readings
 
           // IMPROVED: Detect GPS jumps (sudden position changes > 100m when stationary)
           if (_smoothedLat != null && _smoothedLng != null && _currentPosition != null) {
@@ -197,16 +216,16 @@ class GpsService extends ChangeNotifier {
                 : 1.0;
             if (timeDelta > 0) {
               final speedMs = distMoved / timeDelta;
-              // If claimed speed is impossible for a person (>50 m/s = 180 km/h), reject
-              if (speedMs > 50) return;
+              // If claimed speed is impossible for a person, reject
+              if (speedMs > _speedThresholdMs) return;
             }
           }
 
           _currentPosition = position;
 
           // FIX: Better Kalman filter for latitude with improved parameters
-          final latDegPerMeter = 1 / 111319.5; // Meters per degree latitude
-          final measurementNoiseLat = pow(max(position.accuracy * latDegPerMeter, 0.1), 2); // Minimum noise floor
+          final latDegPerMeter = 1 / _metersPerDegreeLat; // Meters per degree latitude
+          final measurementNoiseLat = pow(max(position.accuracy * latDegPerMeter, _minMeasurementNoise), 2); // Minimum noise floor
           if (_smoothedLat == null) {
             _smoothedLat = position.latitude;
             _latErrorEstimate = position.accuracy * latDegPerMeter;
@@ -215,15 +234,15 @@ class GpsService extends ChangeNotifier {
             final kalmanGain = _latErrorEstimate / (_latErrorEstimate + measurementNoiseLat);
             // Limit correction to prevent jumps
             final correction = kalmanGain * (position.latitude - _smoothedLat!);
-            if (correction.abs() < 0.001) { // Max 100m correction per update
+            if (correction.abs() < _maxCorrectionDegrees) { // Max correction per update
               _smoothedLat = _smoothedLat! + correction;
             }
             _latErrorEstimate *= (1 - kalmanGain);
           }
 
           // FIX: Better Kalman filter for longitude with improved parameters
-          final lngDegPerMeterLng = 1 / (111319.5 * cos(position.latitude * pi / 180));
-          final measurementNoiseLngFinal = pow(max(position.accuracy * lngDegPerMeterLng, 0.1), 2); // Minimum noise floor
+          final lngDegPerMeterLng = 1 / (_metersPerDegreeLat * cos(position.latitude * pi / 180));
+          final measurementNoiseLngFinal = pow(max(position.accuracy * lngDegPerMeterLng, _minMeasurementNoise), 2); // Minimum noise floor
           if (_smoothedLng == null) {
             _smoothedLng = position.longitude;
             _lngErrorEstimate = position.accuracy * lngDegPerMeterLng;
@@ -232,7 +251,7 @@ class GpsService extends ChangeNotifier {
             final kalmanGain = _lngErrorEstimate / (_lngErrorEstimate + measurementNoiseLngFinal);
             // Limit correction to prevent jumps
             final correction = kalmanGain * (position.longitude - _smoothedLng!);
-            if (correction.abs() < 0.001) { // Max 100m correction per update
+            if (correction.abs() < _maxCorrectionDegrees) { // Max correction per update
               _smoothedLng = _smoothedLng! + correction;
             }
             _lngErrorEstimate *= (1 - kalmanGain);
@@ -242,7 +261,7 @@ class GpsService extends ChangeNotifier {
           if (!position.altitude.isNaN) {
             if (_smoothedAlt == null) {
               _smoothedAlt = position.altitude;
-              _altErrorEstimate = position.accuracy * 1.5;
+              _altErrorEstimate = position.accuracy * _altitudeNoiseMultiplier;
             } else {
               final altNoise = position.accuracy * position.accuracy * 2.25;
               _altErrorEstimate += _altProcessNoise;
@@ -267,7 +286,7 @@ class GpsService extends ChangeNotifier {
             _compassProvider!.updateGpsData(
               speed: speedKmh,
               accuracy: position.accuracy,
-              hasLock: position.accuracy < 20, // IMPROVED: was 50 - tighter lock
+              hasLock: position.accuracy < _accuracyLockThreshold, // Tighter lock threshold
               heading: position.heading != -1 ? position.heading : null,
             );
             if (!position.altitude.isNaN) {
@@ -279,10 +298,31 @@ class GpsService extends ChangeNotifier {
             }
           }
 
-          // Resolve address
-          _resolveAddress(position.latitude, position.longitude);
+          // Resolve address asynchronously to not block GPS stream
+          Future.microtask(() => _resolveAddress(position.latitude, position.longitude));
 
-          notifyListeners();
+          // Only notify listeners if coordinates or accuracy have changed significantly
+          final currentLat = _smoothedLat ?? position.latitude;
+          final currentLng = _smoothedLng ?? position.longitude;
+          final currentAccuracy = position.accuracy;
+
+          bool shouldNotify = false;
+          if (_previousLat == null || (_previousLat! - currentLat).abs() > _notificationThresholdDegrees) {
+            _previousLat = currentLat;
+            shouldNotify = true;
+          }
+          if (_previousLng == null || (_previousLng! - currentLng).abs() > _notificationThresholdDegrees) {
+            _previousLng = currentLng;
+            shouldNotify = true;
+          }
+          if (_previousAccuracy == null || (_previousAccuracy! - currentAccuracy).abs() > _notificationThresholdAccuracy) {
+            _previousAccuracy = currentAccuracy;
+            shouldNotify = true;
+          }
+
+          if (shouldNotify) {
+            notifyListeners();
+          }
         },
         onError: (dynamic error) {
           _locationError = 'Location stream error: ${error.toString()}';

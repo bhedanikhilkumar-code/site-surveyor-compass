@@ -7,6 +7,7 @@ import '../providers/compass_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/gps_service.dart';
 import '../widgets/compass_dial.dart';
+import '../widgets/settings_bottom_sheet.dart';
 
 import '../utils/geo_utils.dart';
 import '../utils/app_constants.dart';
@@ -53,16 +54,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _showTrueBearing = true;
-  String _currentTime = '';
-  String _currentDate = '';
-  Timer? _clockTimer;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _updateClock();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final gpsService = context.read<GpsService>();
@@ -75,14 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _updateClock() {
-    if (!mounted) return;
-    final now = DateTime.now();
-    setState(() {
-      _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      _currentDate = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    });
-  }
+
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -97,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _clockTimer?.cancel();
     super.dispose();
   }
 
@@ -110,31 +99,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsBottomSheet(context),
+            onPressed: () => showSettingsBottomSheet(context),
           ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildStatusBar(),
-              const SizedBox(height: 24),
-              _buildCompassSection(),
-              const SizedBox(height: 24),
-              _buildCoordinatesCard(),
-              const SizedBox(height: 16),
-              _buildNavDataCard(),
-              const SizedBox(height: 16),
-              _buildTimeSunCard(),
-              const SizedBox(height: 16),
-              _buildBearingToggle(),
-              const SizedBox(height: 24),
-              _buildQuickActions(),
-            ],
-          ),
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildStatusBar(),
+                  const SizedBox(height: 24),
+                  _buildCompassSection(),
+                  const SizedBox(height: 24),
+                  _buildCoordinatesCard(),
+                  const SizedBox(height: 16),
+                  _buildNavDataCard(),
+                  const SizedBox(height: 16),
+                  _buildTimeSunCard(),
+                  const SizedBox(height: 16),
+                  _buildBearingToggle(),
+                  const SizedBox(height: 24),
+                  _buildQuickActions(),
+                ],
+              ),
+            ),
+            const MapScreen(),
+            const WaypointManagerScreen(),
+            const ToolsScreen(),
+          ],
         ),
       ),
       bottomNavigationBar: _buildBottomNavigation(),
@@ -422,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildTimeItem(Icons.access_time, _currentTime, _currentDate, Colors.amber),
+            const ClockWidget(),
             _buildBearingToggleSmall(),
             Consumer<GpsService>(
               builder: (context, gps, _) {
@@ -675,22 +672,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'More'),
       ],
       onTap: (index) {
-        switch (index) {
-          case 0:
-            // Already on home
-            break;
-          case 1:
-            _navigateTo(const MapScreen());
-            break;
-          case 2:
-            _navigateTo(const WaypointManagerScreen());
-            break;
-          case 3:
-            _navigateTo(const ToolsScreen());
-            break;
-          case 4:
-            _showSettingsBottomSheet(context);
-            break;
+        if (index == 4) {
+          showSettingsBottomSheet(context);
+        } else {
+          setState(() => _selectedIndex = index);
         }
       },
     );
@@ -712,177 +697,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return '$degrees°${minutes.toString().padLeft(2, '0')}\'${seconds.toString().padLeft(2, '0')}"';
   }
 
-  void _showSettingsBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1a1a2e).withOpacity(0.95),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'ALL FEATURES',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white70,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      _settingsTile(Icons.camera_alt, 'Camera GPS Tagging', 'Photo with GPS coordinates', Colors.cyanAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const CameraGpsScreen());
-                      }),
-                      _settingsTile(Icons.trending_up, 'Slope Calculator', 'Calculate slope between two points', Colors.greenAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const SlopeCalculatorScreen());
-                      }),
-                      _settingsTile(Icons.straighten, 'Distance Measure', 'Measure distance by marking points', Colors.blueAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const DistanceMeasureScreen());
-                      }),
-                      _settingsTile(Icons.qr_code, 'QR Code Share', 'Share waypoints via QR code', Colors.purpleAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const QrShareScreen());
-                      }),
-                      _settingsTile(Icons.qr_code_scanner, 'QR Code Scanner', 'Scan waypoints from QR codes', Colors.deepPurpleAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const QrScannerScreen());
-                      }),
-                      _settingsTile(Icons.table_chart, 'Excel Export', 'Export data to Excel spreadsheet', Colors.tealAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const ExcelExportScreen());
-                      }),
-                      _settingsTile(Icons.mic, 'Voice Notes', 'Record voice notes at site', Colors.redAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const VoiceNotesScreen());
-                      }),
-                      _settingsTile(Icons.fiber_manual_record, 'Track Recording', 'Record your movement path', Colors.red, () {
-                        Navigator.pop(context);
-                        _navigateTo(const TrackRecordingScreen());
-                      }),
-                      _settingsTile(Icons.crop_free, 'Area Measurement', 'Measure area by walking perimeter', Colors.green, () {
-                        Navigator.pop(context);
-                        _navigateTo(const AreaMeasurementScreen());
-                      }),
-                      _settingsTile(Icons.view_in_ar, 'AR Compass', 'See waypoints in AR view', Colors.deepPurple, () {
-                        Navigator.pop(context);
-                        _navigateTo(const ArCompassScreen());
-                      }),
-                      _settingsTile(Icons.folder, 'Projects', 'Manage site survey projects', Colors.blue, () {
-                        Navigator.pop(context);
-                        _navigateTo(const ProjectManagerScreen());
-                      }),
-                      _settingsTile(Icons.import_export, 'Import/Export', 'KML, GPX, CSV, JSON', Colors.orange, () {
-                        Navigator.pop(context);
-                        _navigateTo(const ImportExportScreen());
-                      }),
-                      _settingsTile(Icons.brightness_6, 'Night Mode', 'Toggle dark/light theme', Colors.amber, () {
-                        context.read<ThemeProvider>().toggleTheme();
-                        Navigator.pop(context);
-                      }),
-                      _settingsTile(Icons.height, 'Height Measure', 'Measure object height via angle', Colors.lightGreen, () {
-                        Navigator.pop(context);
-                        _navigateTo(const HeightMeasureScreen());
-                      }),
-                      _settingsTile(Icons.terrain, '3D Terrain Viewer', 'View waypoints in 3D', Colors.brown, () {
-                        Navigator.pop(context);
-                        _navigateTo(const TerrainViewerScreen());
-                      }),
-                      _settingsTile(Icons.picture_as_pdf, 'PDF Report', 'Generate survey report', Colors.redAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const PdfReportScreen());
-                      }),
-                      _settingsTile(Icons.swap_horiz, 'Coordinate Converter', 'DD, DMS, UTM formats', Colors.indigo, () {
-                        Navigator.pop(context);
-                        _navigateTo(const CoordinateConverterScreen());
-                      }),
-                      _settingsTile(Icons.explore, 'Bearing Line', 'Draw boundary lines on map', Colors.orangeAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const BearingLineScreen());
-                      }),
-                      _settingsTile(Icons.signal_cellular_alt, 'GPS Strength', 'Signal quality & tips', Colors.lime, () {
-                        Navigator.pop(context);
-                        _navigateTo(const GpsStrengthScreen());
-                      }),
-                      _settingsTile(Icons.bookmark, 'Saved Locations', 'Bookmarked places', Colors.pink, () {
-                        Navigator.pop(context);
-                        _navigateTo(const SavedLocationsScreen());
-                      }),
-                      _settingsTile(Icons.cloud_upload, 'Cloud Backup', 'Auto backup to Firebase', Colors.cyan, () {
-                        Navigator.pop(context);
-                        _navigateTo(const CloudBackupScreen());
-                      }),
-                      _settingsTile(Icons.download_for_offline, 'Offline Maps', 'Download maps for offline use', Colors.blue, () {
-                        Navigator.pop(context);
-                        _navigateTo(const OfflineMapsScreen());
-                      }),
-                      _settingsTile(Icons.sync, 'Data Sync', 'Sync data with cloud storage', Colors.purple, () {
-                        Navigator.pop(context);
-                        _navigateTo(const DataSyncScreen());
-                      }),
-                      _settingsTile(Icons.description, 'Survey Forms', 'Create custom survey forms', Colors.teal, () {
-                        Navigator.pop(context);
-                        _navigateTo(const SurveyFormsScreen());
-                      }),
-                      _settingsTile(Icons.location_searching, 'Geofencing', 'Zone alerts for locations', Colors.indigo, () {
-                        Navigator.pop(context);
-                        _navigateTo(const GeofencingScreen());
-                      }),
-                      _settingsTile(Icons.file_download, 'Export Formats', 'Export KML, GPX, CSV', Colors.green, () {
-                        Navigator.pop(context);
-                        _navigateTo(const ExportFormatsScreen());
-                      }),
-                      _settingsTile(Icons.language, 'Language', 'Change app language', Colors.amber, () {
-                        Navigator.pop(context);
-                        _navigateTo(const LanguageSettingsScreen());
-                      }),
-                      _settingsTile(Icons.bluetooth, 'Bluetooth GPS', 'Connect external GPS', Colors.cyanAccent, () {
-                        Navigator.pop(context);
-                        _navigateTo(const BluetoothGpsScreen());
-                      }),
-                      _settingsTile(Icons.settings, 'Settings', 'GPS, compass, data management', Colors.grey, () {
-                        Navigator.pop(context);
-                        _navigateTo(const SettingsScreen());
-                      }),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _settingsTile(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
     return Container(
@@ -971,4 +786,63 @@ class _NavData {
 
   @override
   int get hashCode => Object.hash(speed, accuracy, hasGpsLock, declination);
+}
+
+class ClockWidget extends StatefulWidget {
+  const ClockWidget({Key? key}) : super(key: key);
+
+  @override
+  State<ClockWidget> createState() => _ClockWidgetState();
+}
+
+class _ClockWidgetState extends State<ClockWidget> {
+  String _currentTime = '';
+  String _currentDate = '';
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateClock();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateClock());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _updateClock() {
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      _currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      _currentDate = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(Icons.access_time, color: Colors.amber, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          _currentTime,
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.amber,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          _currentDate,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      ],
+    );
+  }
 }
