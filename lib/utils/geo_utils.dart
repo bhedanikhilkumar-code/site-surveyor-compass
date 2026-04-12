@@ -878,4 +878,11 @@ class GeoUtils {
     final random = Random();
     return minCloudCover + random.nextDouble() * (maxCloudCover - minCloudCover);
   }
+
+  /// Generate a random precipitation rate between minPrecipitationRate and maxPrecipitationRate millimeters per hour.
+  /// Returns a double representing the precipitation rate in millimeters per hour.
+  static double generateRandomPrecipitationRate(double minPrecipitationRate, double maxPrecipitationRate) {
+    final random = Random();
+    return minPrecipitationRate + random.nextDouble() * (maxPrecipitationRate - minPrecipitationRate);
+  }
 }
