@@ -794,4 +794,11 @@ class GeoUtils {
     final random = Random();
     return minForce + random.nextDouble() * (maxForce - minForce);
   }
+
+  /// Generate a random pressure between minPressure and maxPressure pascals.
+  /// Returns a double representing the pressure in pascals.
+  static double generateRandomPressure(double minPressure, double maxPressure) {
+    final random = Random();
+    return minPressure + random.nextDouble() * (maxPressure - minPressure);
+  }
 }
