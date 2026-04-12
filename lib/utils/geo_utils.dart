@@ -787,4 +787,11 @@ class GeoUtils {
     final random = Random();
     return minMass + random.nextDouble() * (maxMass - minMass);
   }
+
+  /// Generate a random force between minForce and maxForce newtons.
+  /// Returns a double representing the force in newtons.
+  static double generateRandomForce(double minForce, double maxForce) {
+    final random = Random();
+    return minForce + random.nextDouble() * (maxForce - minForce);
+  }
 }
