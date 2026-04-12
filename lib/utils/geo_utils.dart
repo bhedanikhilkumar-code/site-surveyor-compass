@@ -836,4 +836,11 @@ class GeoUtils {
     final random = Random();
     return minSolarRadiation + random.nextDouble() * (maxSolarRadiation - minSolarRadiation);
   }
+
+  /// Generate a random UV index between minUVIndex and maxUVIndex.
+  /// Returns a double representing the UV index.
+  static double generateRandomUVIndex(double minUVIndex, double maxUVIndex) {
+    final random = Random();
+    return minUVIndex + random.nextDouble() * (maxUVIndex - minUVIndex);
+  }
 }
