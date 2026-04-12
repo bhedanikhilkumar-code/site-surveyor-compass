@@ -780,4 +780,11 @@ class GeoUtils {
     final random = Random();
     return minVolume + random.nextDouble() * (maxVolume - minVolume);
   }
+
+  /// Generate a random mass between minMass and maxMass kilograms.
+  /// Returns a double representing the mass in kilograms.
+  static double generateRandomMass(double minMass, double maxMass) {
+    final random = Random();
+    return minMass + random.nextDouble() * (maxMass - minMass);
+  }
 }
