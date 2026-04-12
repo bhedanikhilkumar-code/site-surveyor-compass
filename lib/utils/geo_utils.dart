@@ -590,4 +590,29 @@ class GeoUtils {
       'zoneLetter': zoneLetter,
     };
   }
+
+  /// Calculate the bounding box for a list of geographic points.
+  /// Returns a Map with 'minLat', 'maxLat', 'minLon', 'maxLon'.
+  static Map<String, double> calculateBoundingBox(List<Map<String, double>> points) {
+    if (points.isEmpty) return {'minLat': 0.0, 'maxLat': 0.0, 'minLon': 0.0, 'maxLon': 0.0};
+
+    double minLat = points[0]['lat']!;
+    double maxLat = points[0]['lat']!;
+    double minLon = points[0]['lon']!;
+    double maxLon = points[0]['lon']!;
+
+    for (final point in points) {
+      if (point['lat']! < minLat) minLat = point['lat']!;
+      if (point['lat']! > maxLat) maxLat = point['lat']!;
+      if (point['lon']! < minLon) minLon = point['lon']!;
+      if (point['lon']! > maxLon) maxLon = point['lon']!;
+    }
+
+    return {
+      'minLat': minLat,
+      'maxLat': maxLat,
+      'minLon': minLon,
+      'maxLon': maxLon,
+    };
+  }
 }
