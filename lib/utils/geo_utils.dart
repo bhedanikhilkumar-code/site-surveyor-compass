@@ -615,4 +615,134 @@ class GeoUtils {
       'maxLon': maxLon,
     };
   }
+
+  /// Process live data points for averaging or filtering.
+  /// Returns a Map with 'avgLat' and 'avgLon'.
+  static Map<String, double> processLiveData(List<Map<String, double>> liveData) {
+    if (liveData.isEmpty) return {'avgLat': 0.0, 'avgLon': 0.0};
+
+    double totalLat = 0.0;
+    double totalLon = 0.0;
+
+    for (final point in liveData) {
+      totalLat += point['lat']!;
+      totalLon += point['lon']!;
+    }
+
+    return {
+      'avgLat': totalLat / liveData.length,
+      'avgLon': totalLon / liveData.length,
+    };
+  }
+
+  /// Perform deep research on geographic data by calculating statistical measures.
+  /// Returns a Map with 'meanLat', 'meanLon', 'stdLat', 'stdLon'.
+  static Map<String, double> deepResearch(List<Map<String, double>> data) {
+    if (data.isEmpty) return {'meanLat': 0.0, 'meanLon': 0.0, 'stdLat': 0.0, 'stdLon': 0.0};
+
+    double sumLat = 0.0;
+    double sumLon = 0.0;
+    for (final point in data) {
+      sumLat += point['lat']!;
+      sumLon += point['lon']!;
+    }
+
+    double meanLat = sumLat / data.length;
+    double meanLon = sumLon / data.length;
+
+    double sumSqLat = 0.0;
+    double sumSqLon = 0.0;
+    for (final point in data) {
+      double diffLat = point['lat']! - meanLat;
+      double diffLon = point['lon']! - meanLon;
+      sumSqLat += diffLat * diffLat;
+      sumSqLon += diffLon * diffLon;
+    }
+
+    double stdLat = sqrt(sumSqLat / data.length);
+    double stdLon = sqrt(sumSqLon / data.length);
+
+    return {
+      'meanLat': meanLat,
+      'meanLon': meanLon,
+      'stdLat': stdLat,
+      'stdLon': stdLon,
+    };
+  }
+
+  /// Generate random geographic points within a bounding box.
+  /// Returns a List of Map<String, double> with 'lat' and 'lon'.
+  static List<Map<String, double>> generateRandomPoints(
+    double minLat, double maxLat,
+    double minLon, double maxLon,
+    int count,
+  ) {
+    final List<Map<String, double>> points = [];
+    final random = Random();
+
+    for (int i = 0; i < count; i++) {
+      final lat = minLat + random.nextDouble() * (maxLat - minLat);
+      final lon = minLon + random.nextDouble() * (maxLon - minLon);
+      points.add({'lat': lat, 'lon': lon});
+    }
+
+    return points;
+  }
+
+  /// Shuffle a list of geographic points randomly.
+  /// Returns a shuffled List of Map<String, double>.
+  static List<Map<String, double>> shufflePoints(List<Map<String, double>> points) {
+    final shuffled = List<Map<String, double>>.from(points);
+    shuffled.shuffle();
+    return shuffled;
+  }
+
+  /// Generate a random geographic point within a circle defined by center and radius.
+  /// Returns a Map with 'lat' and 'lon'.
+  static Map<String, double> generateRandomPointInCircle(
+    Map<String, double> center,
+    double radiusMeters,
+  ) {
+    final random = Random();
+    final bearing = random.nextDouble() * 360.0;
+    final distance = sqrt(random.nextDouble()) * radiusMeters; // Uniform in area
+    return calculatePointFromBearingAndDistance(center, bearing, distance);
+  }
+
+  /// Generate a random bearing between 0 and 360 degrees.
+  /// Returns a double representing the bearing in degrees.
+  static double generateRandomBearing() {
+    final random = Random();
+    return random.nextDouble() * 360.0;
+  }
+
+  /// Generate a random distance between minMeters and maxMeters.
+  /// Returns a double representing the distance in meters.
+  static double generateRandomDistance(double minMeters, double maxMeters) {
+    final random = Random();
+    return minMeters + random.nextDouble() * (maxMeters - minMeters);
+  }
+
+  /// Generate a random latitude between -90 and 90 degrees.
+  /// Returns a double representing the latitude in degrees.
+  static double generateRandomLat() {
+    final random = Random();
+    return (random.nextDouble() - 0.5) * 180.0; // -90 to 90
+  }
+
+  /// Generate a random longitude between -180 and 180 degrees.
+  /// Returns a double representing the longitude in degrees.
+  static double generateRandomLon() {
+    final random = Random();
+    return (random.nextDouble() - 0.5) * 360.0; // -180 to 180
+  }
+
+  /// Generate a random geographic point.
+  /// Returns a Map with 'lat' and 'lon'.
+  static Map<String, double> generateRandomPoint() {
+    final random = Random();
+    final lat = (random.nextDouble() - 0.5) * 180.0; // -90 to 90
+    final lon = (random.nextDouble() - 0.5) * 360.0; // -180 to 180
+    return {'lat': lat, 'lon': lon};
+  }
 }
