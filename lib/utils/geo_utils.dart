@@ -829,4 +829,11 @@ class GeoUtils {
     final random = Random();
     return minPrecipitation + random.nextDouble() * (maxPrecipitation - minPrecipitation);
   }
+
+  /// Generate a random solar radiation between minSolarRadiation and maxSolarRadiation watts per square meter.
+  /// Returns a double representing the solar radiation in watts per square meter.
+  static double generateRandomSolarRadiation(double minSolarRadiation, double maxSolarRadiation) {
+    final random = Random();
+    return minSolarRadiation + random.nextDouble() * (maxSolarRadiation - minSolarRadiation);
+  }
 }
