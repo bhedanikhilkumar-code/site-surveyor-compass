@@ -801,4 +801,11 @@ class GeoUtils {
     final random = Random();
     return minPressure + random.nextDouble() * (maxPressure - minPressure);
   }
+
+  /// Generate a random temperature between minTemperature and maxTemperature celsius.
+  /// Returns a double representing the temperature in celsius.
+  static double generateRandomTemperature(double minTemperature, double maxTemperature) {
+    final random = Random();
+    return minTemperature + random.nextDouble() * (maxTemperature - minTemperature);
+  }
 }
