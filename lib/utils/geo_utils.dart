@@ -815,4 +815,11 @@ class GeoUtils {
     final random = Random();
     return minHumidity + random.nextDouble() * (maxHumidity - minHumidity);
   }
+
+  /// Generate a random wind speed between minWindSpeed and maxWindSpeed meters per second.
+  /// Returns a double representing the wind speed in meters per second.
+  static double generateRandomWindSpeed(double minWindSpeed, double maxWindSpeed) {
+    final random = Random();
+    return minWindSpeed + random.nextDouble() * (maxWindSpeed - minWindSpeed);
+  }
 }
