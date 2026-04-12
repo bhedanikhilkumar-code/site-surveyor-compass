@@ -850,4 +850,11 @@ class GeoUtils {
     final random = Random();
     return minAirPressure + random.nextDouble() * (maxAirPressure - minAirPressure);
   }
+
+  /// Generate a random soil moisture between minSoilMoisture and maxSoilMoisture percent.
+  /// Returns a double representing the soil moisture in percent.
+  static double generateRandomSoilMoisture(double minSoilMoisture, double maxSoilMoisture) {
+    final random = Random();
+    return minSoilMoisture + random.nextDouble() * (maxSoilMoisture - minSoilMoisture);
+  }
 }
