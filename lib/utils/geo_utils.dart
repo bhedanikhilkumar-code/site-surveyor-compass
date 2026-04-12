@@ -892,4 +892,11 @@ class GeoUtils {
     final random = Random();
     return minAirQualityIndex + random.nextDouble() * (maxAirQualityIndex - minAirQualityIndex);
   }
+
+  /// Generate a random magnetic declination between minMagneticDeclination and maxMagneticDeclination degrees.
+  /// Returns a double representing the magnetic declination in degrees.
+  static double generateRandomMagneticDeclination(double minMagneticDeclination, double maxMagneticDeclination) {
+    final random = Random();
+    return minMagneticDeclination + random.nextDouble() * (maxMagneticDeclination - minMagneticDeclination);
+  }
 }
