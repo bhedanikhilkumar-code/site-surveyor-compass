@@ -808,4 +808,11 @@ class GeoUtils {
     final random = Random();
     return minTemperature + random.nextDouble() * (maxTemperature - minTemperature);
   }
+
+  /// Generate a random humidity between minHumidity and maxHumidity percent.
+  /// Returns a double representing the humidity in percent.
+  static double generateRandomHumidity(double minHumidity, double maxHumidity) {
+    final random = Random();
+    return minHumidity + random.nextDouble() * (maxHumidity - minHumidity);
+  }
 }
