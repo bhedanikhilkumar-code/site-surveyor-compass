@@ -773,4 +773,11 @@ class GeoUtils {
     final random = Random();
     return minArea + random.nextDouble() * (maxArea - minArea);
   }
+
+  /// Generate a random volume between minVolume and maxVolume cubic meters.
+  /// Returns a double representing the volume in cubic meters.
+  static double generateRandomVolume(double minVolume, double maxVolume) {
+    final random = Random();
+    return minVolume + random.nextDouble() * (maxVolume - minVolume);
+  }
 }
