@@ -759,4 +759,11 @@ class GeoUtils {
     final random = Random();
     return minRadius + random.nextDouble() * (maxRadius - minRadius);
   }
+
+  /// Generate a random slope between minSlope and maxSlope degrees.
+  /// Returns a double representing the slope in degrees.
+  static double generateRandomSlope(double minSlope, double maxSlope) {
+    final random = Random();
+    return minSlope + random.nextDouble() * (maxSlope - minSlope);
+  }
 }
