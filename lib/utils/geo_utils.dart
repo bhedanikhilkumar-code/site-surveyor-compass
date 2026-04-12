@@ -822,4 +822,11 @@ class GeoUtils {
     final random = Random();
     return minWindSpeed + random.nextDouble() * (maxWindSpeed - minWindSpeed);
   }
+
+  /// Generate a random precipitation between minPrecipitation and maxPrecipitation millimeters.
+  /// Returns a double representing the precipitation in millimeters.
+  static double generateRandomPrecipitation(double minPrecipitation, double maxPrecipitation) {
+    final random = Random();
+    return minPrecipitation + random.nextDouble() * (maxPrecipitation - minPrecipitation);
+  }
 }
