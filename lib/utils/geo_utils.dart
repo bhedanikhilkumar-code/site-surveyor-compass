@@ -885,4 +885,11 @@ class GeoUtils {
     final random = Random();
     return minPrecipitationRate + random.nextDouble() * (maxPrecipitationRate - minPrecipitationRate);
   }
+
+  /// Generate a random air quality index between minAirQualityIndex and maxAirQualityIndex.
+  /// Returns a double representing the air quality index.
+  static double generateRandomAirQualityIndex(double minAirQualityIndex, double maxAirQualityIndex) {
+    final random = Random();
+    return minAirQualityIndex + random.nextDouble() * (maxAirQualityIndex - minAirQualityIndex);
+  }
 }
