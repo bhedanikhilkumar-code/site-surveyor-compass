@@ -843,4 +843,11 @@ class GeoUtils {
     final random = Random();
     return minUVIndex + random.nextDouble() * (maxUVIndex - minUVIndex);
   }
+
+  /// Generate a random air pressure between minAirPressure and maxAirPressure pascals.
+  /// Returns a double representing the air pressure in pascals.
+  static double generateRandomAirPressure(double minAirPressure, double maxAirPressure) {
+    final random = Random();
+    return minAirPressure + random.nextDouble() * (maxAirPressure - minAirPressure);
+  }
 }
