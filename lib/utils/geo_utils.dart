@@ -864,4 +864,11 @@ class GeoUtils {
     final random = Random();
     return random.nextDouble() * 360.0;
   }
+
+  /// Generate a random visibility between minVisibility and maxVisibility kilometers.
+  /// Returns a double representing the visibility in kilometers.
+  static double generateRandomVisibility(double minVisibility, double maxVisibility) {
+    final random = Random();
+    return minVisibility + random.nextDouble() * (maxVisibility - minVisibility);
+  }
 }
