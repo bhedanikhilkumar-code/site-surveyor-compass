@@ -766,4 +766,11 @@ class GeoUtils {
     final random = Random();
     return minSlope + random.nextDouble() * (maxSlope - minSlope);
   }
+
+  /// Generate a random area between minArea and maxArea square meters.
+  /// Returns a double representing the area in square meters.
+  static double generateRandomArea(double minArea, double maxArea) {
+    final random = Random();
+    return minArea + random.nextDouble() * (maxArea - minArea);
+  }
 }
