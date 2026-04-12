@@ -745,4 +745,18 @@ class GeoUtils {
     final lon = (random.nextDouble() - 0.5) * 360.0; // -180 to 180
     return {'lat': lat, 'lon': lon};
   }
+
+  /// Generate a random elevation between minElevation and maxElevation.
+  /// Returns a double representing the elevation in meters.
+  static double generateRandomElevation(double minElevation, double maxElevation) {
+    final random = Random();
+    return minElevation + random.nextDouble() * (maxElevation - minElevation);
+  }
+
+  /// Generate a random radius between minRadius and maxRadius meters.
+  /// Returns a double representing the radius in meters.
+  static double generateRandomRadius(double minRadius, double maxRadius) {
+    final random = Random();
+    return minRadius + random.nextDouble() * (maxRadius - minRadius);
+  }
 }
