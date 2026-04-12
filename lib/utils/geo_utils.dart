@@ -857,4 +857,11 @@ class GeoUtils {
     final random = Random();
     return minSoilMoisture + random.nextDouble() * (maxSoilMoisture - minSoilMoisture);
   }
+
+  /// Generate a random wind direction between 0 and 360 degrees.
+  /// Returns a double representing the wind direction in degrees.
+  static double generateRandomWindDirection() {
+    final random = Random();
+    return random.nextDouble() * 360.0;
+  }
 }
