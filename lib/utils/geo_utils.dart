@@ -871,4 +871,11 @@ class GeoUtils {
     final random = Random();
     return minVisibility + random.nextDouble() * (maxVisibility - minVisibility);
   }
+
+  /// Generate a random cloud cover between minCloudCover and maxCloudCover percent.
+  /// Returns a double representing the cloud cover in percent.
+  static double generateRandomCloudCover(double minCloudCover, double maxCloudCover) {
+    final random = Random();
+    return minCloudCover + random.nextDouble() * (maxCloudCover - minCloudCover);
+  }
 }
