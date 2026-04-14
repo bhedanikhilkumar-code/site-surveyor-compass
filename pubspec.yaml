@@ -27,6 +27,7 @@ dependencies:
   vector_math: ^2.1.4
   geomag: ^0.2.1
   firebase_core: ^2.27.0
+  firebase_auth: ^4.17.8
   cloud_firestore: ^4.15.8
   flutter_map: ^6.1.0
   latlong2: ^0.9.1

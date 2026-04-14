@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import '../providers/auth_provider.dart';
 import '../providers/compass_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/gps_service.dart';
@@ -97,6 +98,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('GeoCompass Pro'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => context.read<AuthProvider>().signOut(),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => showSettingsBottomSheet(context, () => context.read<ThemeProvider>().toggleTheme()),

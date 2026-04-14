@@ -9,9 +9,11 @@ import '../models/tagged_photo.dart';
 import '../models/track_model.dart';
 import '../models/voice_note_model.dart';
 import '../models/waypoint_model.dart';
+import '../providers/auth_provider.dart';
 import '../providers/compass_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/home_screen.dart';
+import '../widgets/auth_wrapper.dart';
 import '../services/api_waypoint_service.dart';
 import '../services/firebase_service.dart';
 import '../services/gps_service.dart';
@@ -197,6 +199,7 @@ class SiteSurveyorCompassApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider.value(value: compassProvider),
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider(
@@ -215,7 +218,7 @@ class SiteSurveyorCompassApp extends StatelessWidget {
           theme: themeProvider.getLightTheme(),
           darkTheme: themeProvider.getDarkTheme(),
           themeMode: themeProvider.themeMode,
-          home: const HomeScreen(),
+          home: const AuthWrapper(),
         ),
       ),
     );
