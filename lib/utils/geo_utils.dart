@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:latlong2/latlong.dart';
+import '../services/hitem3d_service.dart';
 
 class GeoUtils {
   static const double earthRadiusKm = 6371.0;
@@ -950,5 +952,18 @@ class GeoUtils {
       'lat': coord['lat'],
       'lon': coord['lon'],
     };
+  }
+
+  /// Generate a 3D model URL from survey points using Hitem3D AI.
+  /// Requires access and secret keys for Hitem3D API.
+  /// Returns the model URL or null if failed.
+  static Future<String?> generate3DModelFromPoints(
+    List<Map<String, double>> points,
+    String accessKey,
+    String secretKey,
+  ) async {
+    final service = Hitem3dService(accessKey, secretKey);
+    final latLngPoints = points.map((p) => LatLng(p['lat']!, p['lon']!)).toList();
+    return await service.generate3DModel(latLngPoints);
   }
 }
