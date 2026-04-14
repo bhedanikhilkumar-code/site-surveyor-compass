@@ -899,4 +899,44 @@ class GeoUtils {
     final random = Random();
     return minMagneticDeclination + random.nextDouble() * (maxMagneticDeclination - minMagneticDeclination);
   }
+
+  /// Generate a random number between min and max (inclusive).
+  /// Returns a double representing the random number.
+  static double generateRandomNumber(double min, double max) {
+    final random = Random();
+    return min + random.nextDouble() * (max - min);
+  }
+
+  /// Generate a random integer between min and max (inclusive).
+  /// Returns an int representing the random integer.
+  static int generateRandomInt(int min, int max) {
+    final random = Random();
+    return min + random.nextInt(max - min + 1);
+  }
+
+  /// Generate a random boolean value.
+  /// Returns a bool representing the random boolean.
+  static bool generateRandomBool() {
+    final random = Random();
+    return random.nextBool();
+  }
+
+  /// Generate a random string of the specified length.
+  /// Returns a String of random characters.
+  static String generateRandomString(int length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(length, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
+    );
+  }
+
+  /// Generate a random geographic coordinate.
+  /// Returns a Map with 'lat' and 'lon' keys.
+  static Map<String, double> generateRandomCoordinate() {
+    final random = Random();
+    final lat = (random.nextDouble() - 0.5) * 180.0; // -90 to 90
+    final lon = (random.nextDouble() - 0.5) * 360.0; // -180 to 180
+    return {'lat': lat, 'lon': lon};
+  }
 }

@@ -67,25 +67,58 @@ class TrackService {
 
   void addPoint(TrackPoint point) {
     if (!_isRecording || _isPaused || _activeTrackId == null) return;
-    
+
+    // FIX: Validate point coordinates
+    if (point.latitude.isNaN || point.longitude.isNaN) return;
+    if (point.latitude.abs() > 90 || point.longitude.abs() > 180) return;
+
     if (_currentPoints.isNotEmpty) {
       final last = _currentPoints.last;
       final dist = GeoUtils.calculateDistance(
         last.latitude, last.longitude,
         point.latitude, point.longitude,
       );
-      if (dist > 0.5 && dist < 500) {
+      
+      // FIX: Only add point if it's at least 1 meter away (reduces noise)
+      // and less than 500m (prevents GPS jumps)
+      if (dist >= 1.0 && dist < 500) {
         _currentDistance += dist;
+        _currentPoints.add(point);
+        
+        // FIX: Periodically save to Hive every 10 points
+        if (_currentPoints.length % 10 == 0) {
+          _saveCurrentTrack();
+        }
       }
+    } else {
+      // First point always added
+      _currentPoints.add(point);
     }
-    _currentPoints.add(point);
+  }
+
+  // FIX: Helper method to save current track state
+  Future<void> _saveCurrentTrack() async {
+    if (_activeTrackId == null || _currentPoints.isEmpty) return;
+    
+    final existingTrack = _trackBox.get(_activeTrackId);
+    if (existingTrack != null) {
+      final updatedTrack = existingTrack.copyWith(
+        points: List.from(_currentPoints),
+        totalDistance: _currentDistance,
+      );
+      await _trackBox.put(_activeTrackId!, updatedTrack);
+    }
   }
 
   Future<Track?> stopRecording() async {
     if (!_isRecording || _activeTrackId == null) return null;
-    
+
     _isRecording = false;
     _isPaused = false;
+    
+    // FIX: Save final track state
+    await _saveCurrentTrack();
+    
     final existingTrack = _trackBox.get(_activeTrackId);
     if (existingTrack == null) return null;
 
@@ -95,7 +128,7 @@ class TrackService {
       totalDistance: _currentDistance,
     );
     await _trackBox.put(_activeTrackId!, updatedTrack);
-    
+
     final track = updatedTrack;
     _activeTrackId = null;
     _currentPoints.clear();

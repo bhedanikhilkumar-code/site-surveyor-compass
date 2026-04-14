@@ -282,90 +282,87 @@ class CompassProvider extends ChangeNotifier {
       _bearing = magneticHeading;
     } else {
       // FULL ACCURACY MODE: Advanced tilt-compensated calculation with improved stability
+      
+      // FIX: Use proper East-North-Down (ENU) coordinate system
       // Normalize accelerometer vector (down direction)
       v.Vector3 down = _accelFiltered.clone();
-      final double accelNorm = sqrt(down.x * down.x + down.y * down.y + down.z * down.z);
-      if (accelNorm > 0) {
-        down.x /= accelNorm;
-        down.y /= accelNorm;
-        down.z /= accelNorm;
+      final double accelNorm = down.length;
+      if (accelNorm > 0.1) { // FIX: Add minimum threshold check
+        down = down.normalized();
+      } else {
+        return; // Invalid accelerometer data
       }
 
       // Normalize magnetometer vector
       v.Vector3 mag = _magFiltered.clone();
-      final double magNorm = sqrt(mag.x * mag.x + mag.y * mag.y + mag.z * mag.z);
-      if (magNorm > 0) {
-        mag.x /= magNorm;
-        mag.y /= magNorm;
-        mag.z /= magNorm;
+      final double magNorm = mag.length;
+      if (magNorm > 0.1) { // FIX: Add minimum threshold check
+        mag = mag.normalized();
+      } else {
+        return; // Invalid magnetometer data
       }
 
-      // Calculate east vector (cross product of down and magnetic north)
+      // Calculate east vector (cross product: down × mag gives East in ENU)
       v.Vector3 east = down.cross(mag);
-      final double eastNorm = sqrt(east.x * east.x + east.y * east.y + east.z * east.z);
-      if (eastNorm > 0) {
-        east.x /= eastNorm;
-        east.y /= eastNorm;
-        east.z /= eastNorm;
+      if (east.length > 0.1) {
+        east = east.normalized();
       }
 
-      // Calculate north vector (cross product of east and down)
+      // Calculate north vector (cross product: east × down gives North)
       v.Vector3 north = east.cross(down);
-      final double northNorm = sqrt(north.x * north.x + north.y * north.y + north.z * north.z);
-      if (northNorm > 0) {
-        north.x /= northNorm;
-        north.y /= northNorm;
-        north.z /= northNorm;
+      if (north.length > 0.1) {
+        north = north.normalized();
       }
 
-      // Calculate heading from north vector - IMPROVED: More stable calculation
-      magneticHeading = atan2(north.y, north.x) * 180 / pi;
+      // FIX: Calculate heading using proper atan2 with North and East components
+      // Heading is angle from North to East, measured clockwise
+      magneticHeading = atan2(east.dot(v.Vector3(0, 1, 0)), north.dot(v.Vector3(0, 1, 0))) * 180 / pi;
       magneticHeading = (magneticHeading + 360) % 360;
 
       // FIX: Better complementary filter with adaptive weighting and drift correction
       double fusedHeading = magneticHeading;
       if (_gyroInitialized) {
-    // Adaptive complementary filter based on magnetic field stability
-    final double filterWeight = _magneticDisturbance ? 0.85 : 0.7; // Trust mag more when stable
+        // Adaptive complementary filter based on magnetic field stability
+        final double filterWeight = _magneticDisturbance ? 0.85 : 0.7; // Trust mag more when stable
 
         // Calculate shortest angular difference with better handling
         double headingDiff = ((magneticHeading - _gyroHeading + 540) % 360) - 180;
-        
+
         // Limit correction to prevent jumps
         if (headingDiff.abs() > 30)
           headingDiff = headingDiff.sign * 30; // Cap at 30 degrees
-        
+
         fusedHeading = _gyroHeading + filterWeight * headingDiff;
         fusedHeading = ((fusedHeading % 360) + 360) % 360;
 
-    // Update gyro reference with gradual correction and drift compensation
-    final double gyroCorrection = 0.01 * headingDiff;
+        // Update gyro reference with gradual correction and drift compensation
+        final double gyroCorrection = 0.01 * headingDiff;
         _gyroHeading += gyroCorrection;
-        
-    // Additional drift correction when magnetic field is stable
-    if (!_magneticDisturbance && _baselineFieldStrength > 0) {
-      final double driftCorrection = 0.00005 * (_bearingEstimate - _gyroHeading);
-      _gyroHeading += driftCorrection;
-    }
-        
+
+        // Additional drift correction when magnetic field is stable
+        if (!_magneticDisturbance && _baselineFieldStrength > 0) {
+          final double driftCorrection = 0.00005 * (_bearingEstimate - _gyroHeading);
+          _gyroHeading += driftCorrection;
+        }
+
         _gyroHeading = ((_gyroHeading % 360) + 360) % 360;
       }
 
-  // FIX: Improved Kalman filter for bearing with better parameters for stability
-  double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
+      // FIX: Improved Kalman filter for bearing with better parameters for stability
+      double delta = ((fusedHeading - _bearingEstimate + 540) % 360) - 180;
 
-  // Limit delta to prevent sudden jumps
-  if (delta.abs() > 45)
-    delta = delta.sign * 45; // Cap at 45 degrees
-      
+      // Limit delta to prevent sudden jumps
+      if (delta.abs() > 45)
+        delta = delta.sign * 45; // Cap at 45 degrees
+
       _bearingErrorEstimate += _bearingQ;
       final kalmanGain = _bearingErrorEstimate / (_bearingErrorEstimate + _bearingR);
       _bearingEstimate += kalmanGain * delta;
       _bearingEstimate = ((_bearingEstimate % 360) + 360) % 360;
       _bearingErrorEstimate *= (1 - kalmanGain);
 
-  // FIX: Apply adaptive bearing smoothing
-  final double smoothingFactor = _magneticDisturbance ? 0.3 : _bearingAlpha; // Less smoothing when disturbed
+      // FIX: Apply adaptive bearing smoothing
+      final double smoothingFactor = _magneticDisturbance ? 0.3 : _bearingAlpha; // Less smoothing when disturbed
       _bearing = _bearing * (1 - smoothingFactor) + _bearingEstimate * smoothingFactor;
 
       // GPS heading fusion for long-term drift correction during movement
@@ -382,7 +379,7 @@ class CompassProvider extends ChangeNotifier {
     }
 
     _trueBearing = (_bearing + _magneticDeclination + 360) % 360;
-    
+
     // Ensure true bearing is also in 0-360 range
     _trueBearing = (_trueBearing + 360) % 360;
   }

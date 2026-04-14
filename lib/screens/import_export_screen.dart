@@ -45,13 +45,24 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
   }
 
   Future<void> _exportKml() async {
+    if (_waypoints.isEmpty && _tracks.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export')),
+        );
+      }
+      return;
+    }
+
     try {
+      setState(() => _isLoading = true);
       final buffer = StringBuffer();
       buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
       buffer.writeln('<kml xmlns="http://www.opengis.net/kml/2.2">');
       buffer.writeln('<Document>');
-      buffer.writeln('<name>Site Surveyor Export</name>');
-      
+      buffer.writeln('<name>GeoCompass Pro Export - ${DateTime.now().toIso8601String()}</name>');
+      buffer.writeln('<description>Exported from GeoCompass Pro Site Surveyor</description>');
+
       for (final wp in _waypoints) {
         buffer.writeln('<Placemark>');
         buffer.writeln('<name>${_xmlEscape(wp.name)}</name>');
@@ -66,19 +77,20 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
         buffer.writeln('<name>${_xmlEscape(track.name)}</name>');
         buffer.writeln('<LineString><coordinates>');
         for (final p in track.points) {
-          buffer.write('${p.longitude},${p.latitude},${p.altitude} ');
+          buffer.writeln('${p.longitude},${p.latitude},${p.altitude}');
         }
         buffer.writeln('</coordinates></LineString>');
         buffer.writeln('</Placemark>');
       }
 
       buffer.writeln('</Document></kml>');
-      
+
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/site_survey_export.kml');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/site_survey_export_$timestamp.kml');
       await file.writeAsString(buffer.toString());
-      await Share.shareXFiles([XFile(file.path)], text: 'Site Surveyor - KML Export');
-      
+      await Share.shareXFiles([XFile(file.path)], text: 'GeoCompass Pro - KML Export');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('KML exported successfully')),
@@ -90,16 +102,28 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
           SnackBar(content: Text('KML export error: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _exportGpx() async {
+    if (_waypoints.isEmpty && _tracks.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export')),
+        );
+      }
+      return;
+    }
+
     try {
+      setState(() => _isLoading = true);
       final buffer = StringBuffer();
       buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
       buffer.writeln('<gpx version="1.1" creator="GeoCompass Pro" xmlns="http://www.topografix.com/GPX/1/1">');
-      buffer.writeln('<metadata><name>Site Surveyor Export</name></metadata>');
-      
+      buffer.writeln('<metadata><name>GeoCompass Pro Export</name><time>${DateTime.now().toIso8601String()}</time></metadata>');
+
       for (final wp in _waypoints) {
         buffer.writeln('<wpt lat="${wp.latitude}" lon="${wp.longitude}">');
         buffer.writeln('<ele>${wp.altitude}</ele>');
@@ -121,12 +145,13 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
       }
 
       buffer.writeln('</gpx>');
-      
+
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/site_survey_export.gpx');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/site_survey_export_$timestamp.gpx');
       await file.writeAsString(buffer.toString());
-      await Share.shareXFiles([XFile(file.path)], text: 'Site Surveyor - GPX Export');
-      
+      await Share.shareXFiles([XFile(file.path)], text: 'GeoCompass Pro - GPX Export');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('GPX exported successfully')),
@@ -138,11 +163,23 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
           SnackBar(content: Text('GPX export error: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _exportCsv() async {
+    if (_waypoints.isEmpty && _tracks.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export')),
+        );
+      }
+      return;
+    }
+
     try {
+      setState(() => _isLoading = true);
       final buffer = StringBuffer();
       buffer.writeln('Type,Name,Latitude,Longitude,Altitude,Notes,Created');
       for (final wp in _waypoints) {
@@ -156,10 +193,11 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
       }
 
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/site_survey_export.csv');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/site_survey_export_$timestamp.csv');
       await file.writeAsString(buffer.toString());
-      await Share.shareXFiles([XFile(file.path)], text: 'Site Surveyor - CSV Export');
-      
+      await Share.shareXFiles([XFile(file.path)], text: 'GeoCompass Pro - CSV Export');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('CSV exported successfully')),
@@ -171,25 +209,38 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
           SnackBar(content: Text('CSV export error: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _exportJson() async {
+    if (_waypoints.isEmpty && _tracks.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No data to export')),
+        );
+      }
+      return;
+    }
+
     try {
+      setState(() => _isLoading = true);
       final data = {
         'exportedAt': DateTime.now().toIso8601String(),
         'app': 'GeoCompass Pro',
-        'version': '2.0.0',
+        'version': '4.0.0',
         'waypoints': _waypoints.map((w) => w.toJson()).toList(),
         'tracks': _tracks.map((t) => t.toJson()).toList(),
       };
       final content = const JsonEncoder.withIndent('  ').convert(data);
-      
+
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/site_survey_export.json');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/site_survey_export_$timestamp.json');
       await file.writeAsString(content);
-      await Share.shareXFiles([XFile(file.path)], text: 'Site Surveyor - JSON Export');
-      
+      await Share.shareXFiles([XFile(file.path)], text: 'GeoCompass Pro - JSON Export');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('JSON exported successfully')),
@@ -201,6 +252,8 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
           SnackBar(content: Text('JSON export error: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

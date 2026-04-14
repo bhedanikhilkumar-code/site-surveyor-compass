@@ -257,16 +257,23 @@ class GpsService extends ChangeNotifier {
             _lngErrorEstimate *= (1 - kalmanGain);
           }
 
-          // IMPROVED: Altitude smoothing
+          // IMPROVED: Altitude smoothing with realistic noise model
           if (!position.altitude.isNaN) {
             if (_smoothedAlt == null) {
               _smoothedAlt = position.altitude;
-              _altErrorEstimate = position.accuracy * _altitudeNoiseMultiplier;
+              // GPS altitude accuracy is typically 2-3x worse than horizontal
+              _altErrorEstimate = max(position.accuracy * 2.0, 5.0);
             } else {
-              final altNoise = position.accuracy * position.accuracy * 2.25;
+              // FIX: Use linear accuracy model instead of quadratic
+              // Altitude measurement noise should be proportional to accuracy
+              final altNoise = pow(max(position.accuracy * 0.01, _minMeasurementNoise * 2), 2);
               _altErrorEstimate += _altProcessNoise;
               final kalmanGain = _altErrorEstimate / (_altErrorEstimate + altNoise);
-              _smoothedAlt = _smoothedAlt! + kalmanGain * (position.altitude - _smoothedAlt!);
+              // Limit altitude corrections to prevent jumps
+              final altitudeCorrection = kalmanGain * (position.altitude - _smoothedAlt!);
+              if (altitudeCorrection.abs() < 5.0) { // Max 5m correction per update
+                _smoothedAlt = _smoothedAlt! + altitudeCorrection;
+              }
               _altErrorEstimate *= (1 - kalmanGain);
             }
           }

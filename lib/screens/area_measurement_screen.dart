@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -100,17 +99,12 @@ class _AreaMeasurementScreenState extends State<AreaMeasurementScreen> {
       return;
     }
 
-    double totalArea = 0.0;
-    for (int i = 0; i < _points.length; i++) {
-      final j = (i + 1) % _points.length;
-      final lat1 = _points[i].latitudeInRad;
-      final lat2 = _points[j].latitudeInRad;
-      final lng1 = _points[i].longitudeInRad;
-      final lng2 = _points[j].longitudeInRad;
-      totalArea += (lng2 - lng1) * (2 + sin(lat1) + sin(lat2));
-    }
-    _area = (totalArea.abs() * GeoUtils.earthRadiusKm * GeoUtils.earthRadiusKm * 1000000) / 2;
+    // FIX: Use spherical polygon area calculation for better accuracy
+    // Convert to the format expected by GeoUtils
+    final polygonPoints = _points.map((p) => {'lat': p.latitude, 'lon': p.longitude}).toList();
+    _area = GeoUtils.calculatePolygonArea(polygonPoints);
 
+    // Calculate perimeter
     double totalPerimeter = 0.0;
     for (int i = 0; i < _points.length; i++) {
       final j = (i + 1) % _points.length;
