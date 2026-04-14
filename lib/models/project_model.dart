@@ -27,17 +27,17 @@ class SiteProject {
 
   @HiveField(7)
   final String? location;
+   SiteProject({
+     required this.id,
+     required this.name,
+     this.description = "",
+     required this.createdAt,
+     DateTime? updatedAt,
+     this.color = "#2196F3",
+     this.clientName,
+     this.location,
+   }) : updatedAt = updatedAt ?? createdAt;
 
-  SiteProject({
-    required this.id,
-    required this.name,
-    this.description = '',
-    required this.createdAt,
-    DateTime? updatedAt,
-    this.color = '#2196F3',
-    this.clientName,
-    this.location,
-  }) : updatedAt = updatedAt ?? createdAt;
 
   SiteProject copyWith({
     String? id,

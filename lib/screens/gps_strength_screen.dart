@@ -259,3 +259,4 @@ class _AccuracyChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _AccuracyChartPainter old) => old.history.length != history.length;
 }
+

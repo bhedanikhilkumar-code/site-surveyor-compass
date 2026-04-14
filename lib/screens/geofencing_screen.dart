@@ -270,3 +270,4 @@ class GeofenceZone {
     this.isInside = false,
   });
 }
+

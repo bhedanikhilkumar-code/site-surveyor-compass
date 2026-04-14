@@ -205,3 +205,4 @@ class SyncHistory {
   SyncHistory({required this.type, required this.time, required this.status});
 }
 
+
