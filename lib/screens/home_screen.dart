@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../providers/auth_provider.dart';
 import '../providers/compass_provider.dart';
 import '../providers/theme_provider.dart';
@@ -56,10 +57,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _showTrueBearing = true;
   int _selectedIndex = 0;
+  late SpeechToText _speechToText;
 
   @override
   void initState() {
     super.initState();
+    _speechToText = SpeechToText();
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -91,6 +94,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  void _handleVoiceCommand(BuildContext context) async {
+    if (await _speechToText.initialize()) {
+      _speechToText.listen(onResult: (result) {
+        final command = result.recognizedWords.toLowerCase();
+        if (command.contains('start tracking')) {
+          setState(() {
+            _selectedIndex = 4; // Assuming track recording is at index 4
+          });
+        } else if (command.contains('add waypoint')) {
+          setState(() {
+            _selectedIndex = 1; // Assuming waypoint manager is at index 1
+          });
+        } else if (command.contains('calculate area')) {
+          setState(() {
+            _selectedIndex = 3; // Assuming area measurement is at index 3
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Voice command not recognized: $command')),
+          );
+        }
+        _speechToText.stop();
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech recognition not available')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,6 +131,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('GeoCompass Pro'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.mic),
+            onPressed: () => _handleVoiceCommand(context),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().signOut(),
