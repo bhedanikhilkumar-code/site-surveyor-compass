@@ -1,0 +1,13 @@
+{
+  "appTitle": "GeoCompass Pro",
+  "login": "Login",
+  "email": "Email",
+  "password": "Password",
+  "signup": "Sign Up",
+  "logout": "Logout",
+  "settings": "Settings",
+  "voiceCommand": "Voice Command",
+  "startTracking": "Start Tracking",
+  "addWaypoint": "Add Waypoint",
+  "calculateArea": "Calculate Area"
+}

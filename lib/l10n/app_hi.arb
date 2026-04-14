@@ -1,0 +1,13 @@
+{
+  "appTitle": "जियोकंपास प्रो",
+  "login": "लॉगिन",
+  "email": "ईमेल",
+  "password": "पासवर्ड",
+  "signup": "साइन अप",
+  "logout": "लॉगआउट",
+  "settings": "सेटिंग्स",
+  "voiceCommand": "वॉयस कमांड",
+  "startTracking": "ट्रैकिंग शुरू करें",
+  "addWaypoint": "वेपॉइंट जोड़ें",
+  "calculateArea": "क्षेत्रफल गणना करें"
+}
