@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import '../services/gps_service.dart';
@@ -21,10 +22,13 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   bool _isDownloading = false;
   double _downloadProgress = 0;
   String? _currentDownloadName;
+  bool _isOffline = false;
+  var store;
 
   @override
   void initState() {
     super.initState();
+    store = FMTC.instance('offlineMaps');
     _loadDownloads();
   }
 
@@ -106,36 +110,36 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
       _currentDownloadName = 'Region ${_downloads.length + 1}';
     });
 
-    for (int i = 0; i <= 100; i += 10) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      setState(() {
-        _downloadProgress = i / 100;
-      });
-    }
-
     final gpsService = context.read<GpsService>();
     final position = gpsService.currentPosition;
-    
-    setState(() {
-      _downloads.add(DownloadRegion(
-        name: _currentDownloadName!,
-        center: position != null 
-            ? LatLng(position.latitude, position.longitude)
-            : const LatLng(28.6139, 77.2090),
-        radiusKm: 5.0,
-        downloadedAt: DateTime.now(),
-      ));
-      _isDownloading = false;
-      _currentDownloadName = null;
+    final center = position != null
+        ? LatLng(position.latitude, position.longitude)
+        : const LatLng(28.6139, 77.2090);
+
+    final region = CircleRegion(center, 5000); // 5km in meters
+
+    store.download.startForeground(region: region).listen((event) {
+      setState(() {
+        _downloadProgress = event.progress as double;
+      });
+    }).onDone(() {
+      setState(() {
+        _downloads.add(DownloadRegion(
+          name: _currentDownloadName!,
+          center: center,
+          radiusKm: 5.0,
+          downloadedAt: DateTime.now(),
+        ));
+        _isDownloading = false;
+        _currentDownloadName = null;
+      });
+      _saveDownloads();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Region downloaded for offline use!')),
+        );
+      }
     });
-
-    await _saveDownloads();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Region downloaded for offline use!')),
-      );
-    }
   }
 
   void _deleteDownload(int index) {
@@ -152,6 +156,14 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
         title: const Text('Offline Maps'),
         backgroundColor: const Color(0xFF1a1a2e),
         actions: [
+          IconButton(
+            icon: Icon(_isOffline ? Icons.cloud_off : Icons.cloud),
+            onPressed: () {
+              setState(() {
+                _isOffline = !_isOffline;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: _startDownload,
