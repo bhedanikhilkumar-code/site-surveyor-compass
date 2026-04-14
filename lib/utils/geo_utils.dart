@@ -939,4 +939,16 @@ class GeoUtils {
     final lon = (random.nextDouble() - 0.5) * 360.0; // -180 to 180
     return {'lat': lat, 'lon': lon};
   }
+
+  /// Generate a random waypoint with name and coordinates.
+  /// Returns a Map with 'name', 'lat', and 'lon' keys.
+  static Map<String, dynamic> generateRandomWaypoint() {
+    final coord = generateRandomCoordinate();
+    final name = 'WP_${generateRandomString(4)}';
+    return {
+      'name': name,
+      'lat': coord['lat'],
+      'lon': coord['lon'],
+    };
+  }
 }
