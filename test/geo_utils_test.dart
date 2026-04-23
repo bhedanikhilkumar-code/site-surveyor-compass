@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:latlong2/latlong.dart';
-import '../lib/utils/geo_utils.dart';
+import 'package:geocompass_pro/utils/geo_utils.dart';
 
 void main() {
   group('GeoUtils Tests', () {
