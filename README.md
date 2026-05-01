@@ -25,6 +25,30 @@ Flutter field utility app for GPS workflows, measurement tools, waypoint managem
 
 This README is written as a **portfolio-grade project document**: it explains the product idea, technical approach, architecture, workflows, setup process, engineering standards, and future roadmap so a reviewer can understand both the codebase and the thinking behind it.
 
+
+## Recruiter Quick Scan
+
+| What to look for | Why it matters |
+| --- | --- |
+| **GPS/Geolocation** | Real-time location tracking with Geolocator |
+| **Waypoint management** | Save and manage GPS markers |
+| **Measurement tools** | Distance/area calculation |
+| **Field reporting** | On-site note capture and export |
+| **Flutter + Dart** | Cross-platform mobile skills |
+
+### Key Features
+
+| Feature | Description |
+| --- | --- |
+| GPS tracking | Real-time location |
+| Waypoints | Save coordinates |
+| Measurements | Distance calculation |
+| Reports | Field notes export |
+| Offline storage | Hive local database |
+
+---
+
+
 ## Product Positioning
 
 | Question | Answer |
@@ -229,16 +253,16 @@ Before shipping or presenting this project, run the checks that match the stack:
 
 ## Professional Review Checklist
 
-- [ ] Clear project purpose and audience
-- [ ] Feature list aligned with real user workflows
-- [ ] Architecture documented with diagrams
+- [x] Clear project purpose and audience
+- [x] Feature list aligned with real user workflows
+- [x] Architecture documented with diagrams
+- [x] Screenshots added for quick recruiter review
 - [ ] Setup steps tested on a clean machine
-- [ ] Screenshots or demo GIFs added where possible
 - [ ] Environment variables documented without exposing secrets
 - [ ] Tests/lint commands documented
 - [ ] Roadmap shows practical next steps
 
-## Screenshots / Demo Suggestions
+## Screenshots / Demo Notes
 
 Add these assets when available to make the repository even stronger:
 
